@@ -421,6 +421,15 @@ final class Preferences: ObservableObject {
         didSet { defaults.set(sessionBlockedSoundName, forKey: Keys.sessionBlockedSoundName) }
     }
 
+    /// One chime when an agent opens a new explicit request.
+    @Published var actionRequestSound: Bool {
+        didSet { defaults.set(actionRequestSound, forKey: Keys.actionRequestSound) }
+    }
+
+    @Published var actionRequestSoundName: String {
+        didSet { defaults.set(actionRequestSoundName, forKey: Keys.actionRequestSoundName) }
+    }
+
     /// Show a notification modal from the notch when a provider's limit resets.
     @Published var announceUsageReset: Bool {
         didSet { defaults.set(announceUsageReset, forKey: Keys.announceUsageReset) }
@@ -560,6 +569,8 @@ final class Preferences: ObservableObject {
         static let peekDuration = "peekDuration"
         static let sessionEndSoundName = "sessionEndSoundName"
         static let sessionBlockedSoundName = "sessionBlockedSoundName"
+        static let actionRequestSound = "actionRequestSound"
+        static let actionRequestSoundName = "actionRequestSoundName"
         static let announceUsageReset = "announceUsageReset"
         static let usageResetSound = "usageResetSound"
         static let usageResetSoundName = "usageResetSoundName"
@@ -924,6 +935,9 @@ final class Preferences: ObservableObject {
             ?? SessionChime.defaultFinished
         self.sessionBlockedSoundName = defaults.string(forKey: Keys.sessionBlockedSoundName)
             ?? SessionChime.defaultBlocked
+        self.actionRequestSound = defaults.object(forKey: Keys.actionRequestSound) as? Bool ?? true
+        self.actionRequestSoundName = defaults.string(forKey: Keys.actionRequestSoundName)
+            ?? SessionChime.defaultFinished
         self.announceUsageReset = defaults.object(forKey: Keys.announceUsageReset) as? Bool ?? true
         self.usageResetSound = defaults.object(forKey: Keys.usageResetSound) as? Bool ?? true
         self.usageResetSoundName = defaults.string(forKey: Keys.usageResetSoundName)

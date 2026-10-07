@@ -40,8 +40,11 @@ final class NotchWindowController {
     /// edge remembers. The fleet owns writing that to preferences, for the
     /// same reason it owns `onReposition`.
     var onMoveToEdge: ((NotchEdge, CGFloat?) -> Void)?
+    var onResolveRequest: ((ActionRequestKey) -> Void)?
+    var currentRequest: ((String) -> ActionRequest?)?
 
     private var panel: NotchPanel?
+    private var requestPanel: RequestPanel?
     private var hostingView: NotchHostingView<NotchRootView>?
 
     /// The display this notch belongs to. Nil follows the menu-bar screen,
@@ -145,10 +148,11 @@ final class NotchWindowController {
     /// When a full-screen app is active on the current space, auto-folds the notch.
     /// When returning to a desktop space with `isAlwaysOn`, restores the unfolded state.
     func handleActiveSpaceOrAppChange() {
-        if foldsForFullScreen && isFullScreenActive() && !model.isPinned {
+        if foldsForFullScreen && isFullScreenActive() && !model.isPinned
+            && !model.staysOpenForRequests {
             if let panel {
                 let local = localCursor(in: panel.frame)
-                let overTooltip = model.hoveredIndex
+                let overTooltip = (model.isRequestPanelOpen ? nil : model.hoveredIndex)
                     .flatMap(tooltipRect(index:))
                     .map { model.isExpanded && $0.contains(local) } ?? false
                 if liveRect.contains(local) || overTooltip {
@@ -166,6 +170,7 @@ final class NotchWindowController {
 
     /// Immediately folds the notch and clears pending hover timers when a full-screen app takes focus.
     func foldForFullScreen() {
+        guard !model.staysOpenForRequests else { return }
         if let peekUntil, peekUntil > Date() { return }
         foldWork?.cancel()
         foldWork = nil
@@ -194,6 +199,7 @@ final class NotchWindowController {
     }
 
     func show() {
+        model.onShowRequests = { [weak self] in self?.showRequestPanel() }
         relocate()
         startWatchingCursor()
         startWatchingFullScreen()
@@ -231,6 +237,16 @@ final class NotchWindowController {
                     // percentage and reset time is written out, and on a notch
                     // held open there is no unfold to notice instead.
                     if index != nil { self?.onLook?() }
+                }
+            }
+            .store(in: &cancellables)
+
+        model.$actionRequests
+            .dropFirst()
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.requestPanel?.close()
+                    self?.requestPanel = nil
                 }
             }
             .store(in: &cancellables)
@@ -288,6 +304,8 @@ final class NotchWindowController {
     }
 
     func stop() {
+        requestPanel?.close()
+        requestPanel = nil
         setPointing(false)
         peekUntil = nil
         peekWork?.cancel()
@@ -1322,7 +1340,8 @@ final class NotchWindowController {
         if model.isExpanded, let event = model.activeResetAlert, let card = resetCardRect(event: event) {
             rects.append(card)
         }
-        if model.isExpanded, let index = model.hoveredIndex, let card = tooltipRect(index: index) {
+        if model.isExpanded, !model.isRequestPanelOpen,
+           let index = model.hoveredIndex, let card = tooltipRect(index: index) {
             rects.append(card)
         }
         hostingView?.interactiveRects = rects
@@ -1413,7 +1432,7 @@ final class NotchWindowController {
     func cursorMoved() {
         guard let panel, !isOptionDragging else { return }
         let local = localCursor(in: panel.frame)
-        let overTooltip = model.hoveredIndex
+        let overTooltip = (model.isRequestPanelOpen ? nil : model.hoveredIndex)
             .flatMap(tooltipRect(index:))
             .map { model.isExpanded && $0.contains(local) } ?? false
         // The fold setting gates this check as surely as the one in
@@ -1426,7 +1445,8 @@ final class NotchWindowController {
         var target: Int?
         if model.isExpanded, notchRect.contains(local) {
             target = cellIndex(along: placement.along(of: local))
-        } else if model.isExpanded, let current = model.hoveredIndex,
+        } else if model.isExpanded, !model.isRequestPanelOpen,
+                  let current = model.hoveredIndex,
                   let card = tooltipRect(index: current),
                   card.contains(local) {
             target = current
@@ -1503,7 +1523,8 @@ final class NotchWindowController {
         // A peek holds the notch open for its own duration; only after that
         // does the pointer get a say again.
         if let peekUntil, peekUntil > Date() { return }
-        guard model.isExpanded, foldWork == nil, !model.isPinned else { return }
+        guard model.isExpanded, foldWork == nil, !model.isPinned,
+              !model.staysOpenForRequests else { return }
         // Pinned is settled above; what is left to decide is whether "Always
         // show" holds it, and only a frontmost full-screen app overrules that.
         let ignoresAlwaysOn = model.isAlwaysOn && ignoreAlwaysOn()
@@ -1511,7 +1532,8 @@ final class NotchWindowController {
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                let stillHoldsOpen = self.model.isPinned || (self.model.isAlwaysOn && !ignoresAlwaysOn)
+                let stillHoldsOpen = self.model.isPinned || self.model.staysOpenForRequests
+                    || (self.model.isAlwaysOn && !ignoresAlwaysOn)
                 guard !stillHoldsOpen else {
                     self.foldWork = nil
                     return
@@ -1581,6 +1603,12 @@ final class NotchWindowController {
         }
         // Use the event position even if the pointer has moved since the click.
         let local = CGPoint(x: locationInWindow.x, y: panel.frame.height - locationInWindow.y)
+        if !model.actionRequests.isEmpty,
+           abs(placement.along(of: local) - (model.handleWing.lead + model.flare + 10)) < 24,
+           notchRect.contains(local) {
+            showRequestPanel()
+            return
+        }
 
         // The handle sits inside the notch, so it has to be tested before the
         // cells — otherwise the cell band nearest the foot of the stack swallows
@@ -1616,7 +1644,8 @@ final class NotchWindowController {
         // Clicks on the tooltip card belong to whatever is drawn there — the
         // session rows take their own taps — and must not fall through to the
         // cell refetch or the pin toggle underneath.
-        if model.isExpanded, let index = model.hoveredIndex,
+        if model.isExpanded, !model.isRequestPanelOpen,
+           let index = model.hoveredIndex,
            let card = tooltipRect(index: index), card.contains(local) {
             return
         }
@@ -1853,7 +1882,7 @@ final class NotchWindowController {
             // already be somewhere else, in which case nothing would arrive to
             // close it and "on hover" would look exactly like "always show".
             withAnimation(NotchMotion.unfold) {
-                model.isExpanded = false
+                model.isExpanded = model.staysOpenForRequests
                 model.hoveredIndex = nil
             }
         case .hidden:
@@ -1908,7 +1937,8 @@ final class NotchWindowController {
                 guard let self, let panel = self.panel else { return }
                 self.peekWork = nil
                 self.peekUntil = nil
-                let stillHoldsOpen = self.model.isPinned || (self.model.isAlwaysOn && !(self.foldsForFullScreen && self.isFullScreenActive()))
+                let stillHoldsOpen = self.model.isPinned || self.model.staysOpenForRequests
+                    || (self.model.isAlwaysOn && !(self.foldsForFullScreen && self.isFullScreenActive()))
                 guard !stillHoldsOpen else { return }
                 // Left open if the peek did its job and the pointer is already
                 // there; the ordinary hover fold takes it from here.
@@ -2044,6 +2074,15 @@ final class NotchWindowController {
         // AppKit otherwise decides enablement itself and overrules the line
         // below. Turning it off means every item has to say so for itself.
         menu.autoenablesItems = false
+        if !model.actionRequests.isEmpty {
+            let requests = NSMenuItem(title: "Requests (\(model.actionRequests.count))",
+                                      action: #selector(MenuActions.showRequests(_:)),
+                                      keyEquivalent: "")
+            requests.target = menuActions
+            requests.isEnabled = true
+            menu.addItem(requests)
+            menu.addItem(.separator())
+        }
         let keepOpen = NSMenuItem(
             title: L10n.t("Keep open"),
             action: #selector(MenuActions.togglePinned(_:)),
@@ -2087,8 +2126,70 @@ final class NotchWindowController {
     private lazy var menuActions = MenuActions(
         refresh: { [weak self] in self?.onRefresh?() },
         signIn: { [weak self] index in self?.signInItems[safe: index]?.action() },
-        togglePinned: { [weak self] in self?.togglePinned() }
+        togglePinned: { [weak self] in self?.togglePinned() },
+        showRequests: { [weak self] in self?.showRequestPanel() }
     )
+
+    private func openRequest(_ key: ActionRequestKey) {
+        guard let current = currentRequest?(key.id), current.key == key,
+              let link = current.deepLink else { return }
+        if !NSWorkspace.shared.open(link) {
+            Log.usage.error("Codex chat link could not be opened")
+        }
+    }
+
+    func showRequestPanel() {
+        guard let notch = panel, !model.actionRequests.isEmpty else { return }
+        if let requestPanel, requestPanel.isVisible {
+            requestPanel.close()
+            return
+        }
+        let screen = notch.screen ?? currentScreen()
+        let visible = screen?.visibleFrame ?? notch.frame
+        let width = min(RequestPanelView.preferredWidth, visible.width - 24)
+        let height = min(RequestPanelView.height(for: model.actionRequests, width: width),
+                         visible.height - 24)
+        let badge = placement.point(
+            along: model.handleWing.lead + model.flare + 10,
+            across: model.notchDepth / 2
+        )
+        let anchor = CGPoint(x: notch.frame.minX + badge.x,
+                             y: notch.frame.maxY - badge.y)
+        let offset: CGFloat = 16
+        let origin: CGPoint
+        switch model.edge {
+        case .right: origin = CGPoint(x: anchor.x - width - offset, y: anchor.y - height / 2)
+        case .left: origin = CGPoint(x: anchor.x + offset, y: anchor.y - height / 2)
+        case .top: origin = CGPoint(x: anchor.x - width / 2, y: anchor.y - height - offset)
+        case .bottom: origin = CGPoint(x: anchor.x - width / 2, y: anchor.y + offset)
+        }
+        let x = min(max(origin.x, visible.minX + 12), visible.maxX - width - 12)
+        let y = min(max(origin.y, visible.minY + 12), visible.maxY - height - 12)
+        let requestPanel = RequestPanel(contentRect: CGRect(x: x, y: y, width: width, height: height))
+        requestPanel.onClose = { [weak self] in
+            self?.model.isRequestPanelOpen = false
+            self?.requestPanel = nil
+            self?.updateInteractiveRects()
+        }
+        let content = RequestPanelView(
+            requests: model.actionRequests, width: width, maxHeight: height,
+            open: { [weak self] key in
+                self?.requestPanel?.close()
+                self?.openRequest(key)
+            },
+            clear: { [weak self] key in
+                guard self?.currentRequest?(key.id)?.key == key else { return }
+                self?.onResolveRequest?(key)
+                self?.requestPanel?.close()
+            },
+            dismiss: { [weak self] in self?.requestPanel?.close() }
+        )
+        requestPanel.contentView = NSHostingView(rootView: content)
+        model.isRequestPanelOpen = true
+        updateInteractiveRects()
+        requestPanel.makeKeyAndOrderFront(nil)
+        self.requestPanel = requestPanel
+    }
 }
 
 
@@ -2098,19 +2199,23 @@ final class MenuActions: NSObject {
     private let refresh: () -> Void
     private let signIn: (Int) -> Void
     private let pin: () -> Void
+    private let showRequestsAction: () -> Void
 
     init(
         refresh: @escaping () -> Void,
         signIn: @escaping (Int) -> Void,
-        togglePinned: @escaping () -> Void
+        togglePinned: @escaping () -> Void,
+        showRequests: @escaping () -> Void = {}
     ) {
         self.refresh = refresh
         self.signIn = signIn
         self.pin = togglePinned
+        self.showRequestsAction = showRequests
     }
 
     @objc func refreshNow(_ sender: Any?) { refresh() }
     @objc func togglePinned(_ sender: Any?) { pin() }
+    @objc func showRequests(_ sender: Any?) { showRequestsAction() }
 
     @objc func signIn(_ sender: Any?) {
         guard let item = sender as? NSMenuItem else { return }

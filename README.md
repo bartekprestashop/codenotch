@@ -15,24 +15,30 @@ still working, done, or waiting on you.**
 
 </div>
 
+> **Fork note:** This branch is based on [Vinz's Codenotch 1.22](https://github.com/vinzdg/codenotch)
+> and adds agent requests in the notch, a configurable request sound and delayed Telegram
+> reminder, a request CLI, and an isolated QA build. See
+> [Agent requests](docs/action-requests.md). The download links below point to
+> the original project's releases; no release of this fork is published.
+
 Hover a ring for its limit windows and when they reset. Claude's ring shows the
 same **current session** window Claude Code's own `/usage` leads with, so the
 two never disagree.
 
 ## Download
 
-[![Download for macOS](docs/design/download-macos.svg)](../../releases/latest/download/Codenotch.dmg)
+[![Download for macOS](docs/design/download-macos.svg)](https://github.com/vinzdg/codenotch/releases/latest/download/Codenotch.dmg)
 
 That button is the disk image itself, not the page it sits on — the asset is
 named `Codenotch.dmg` in every release, so `releases/latest/download/` always
 resolves to the newest one and the link never needs updating. Signed,
 notarized, and updating itself from then on. Take this one unless you have a
-reason not to; the [release page](../../releases/latest) has the notes.
+reason not to; the [release page](https://github.com/vinzdg/codenotch/releases/latest) has the notes.
 
 To try unreleased `main` without an Xcode install, the [preview
-build](../../releases/tag/preview) is rebuilt from every commit, and the
+build](https://github.com/vinzdg/codenotch/releases/tag/preview) is rebuilt from every commit, and the
 Package workflow keeps a per-commit disk image on each of its
-[runs](../../actions/workflows/package.yml). Neither is notarized — they are
+[runs](https://github.com/vinzdg/codenotch/actions/workflows/package.yml). Neither is notarized — they are
 ad-hoc signed, because the Developer ID certificate exists on one machine — so
 macOS quarantines the download. Clear the flag once, after dragging the app to
 Applications:
@@ -48,7 +54,7 @@ instead, see [Building](#building).
 
 ## Windows
 
-[![Download for Windows](docs/design/download-windows.svg)](../../releases/latest/download/Codenotch-Setup.exe)
+[![Download for Windows](docs/design/download-windows.svg)](https://github.com/vinzdg/codenotch/releases/latest/download/Codenotch-Setup.exe)
 
 A Windows port — Rust/Tauri 2, same design and providers — lives in [`windows/`](windows/README.md).
 The button is the installer itself, named `Codenotch-Setup.exe` in every release for the same
@@ -57,7 +63,7 @@ and fetches WebView2 if Windows does not already have it.
 
 The installer is not code-signed, so the first time it runs SmartScreen says *Windows protected
 your PC*. Choose **More info**, then **Run anyway**. Every Windows change also leaves an
-installer on its [Windows Package run](../../actions/workflows/windows-package.yml).
+installer on its [Windows Package run](https://github.com/vinzdg/codenotch/actions/workflows/windows-package.yml).
 
 ## Connect your phone
 

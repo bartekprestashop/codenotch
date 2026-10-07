@@ -33,6 +33,23 @@ struct NotchRootView: View {
                         .animation(motion(NotchMotion.reading), value: model.readingAcrossTextWidth)
                 }
 
+                if !model.actionRequests.isEmpty {
+                    Text("\(model.actionRequests.count)")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(.black)
+                        .frame(minWidth: 28, minHeight: 28)
+                        .background(.orange, in: Circle())
+                        .contentShape(Circle())
+                        .position(place.point(
+                            along: model.handleWing.lead + (model.isExpanded
+                                ? model.flare + 10 : model.handleWing.length / 2),
+                            across: model.notchDepth / 2
+                        ))
+                        .onTapGesture { model.onShowRequests?() }
+                        .accessibilityLabel("\(model.actionRequests.count) requests need your response")
+                        .accessibilityAddTraits(.isButton)
+                }
+
                 // The grip that moves the notch, beside the settings button:
                 // out with it, and held out while the pointer is on it. Under
                 // the button, which it comes out of and goes back into.
@@ -153,7 +170,7 @@ struct NotchRootView: View {
                         y: model.edge.outward.y * Design.px(24)
                     )))
                 } else if let snapshot = model.hoveredSnapshot, let index = model.hoveredIndex,
-                   model.isExpanded {
+                   model.isExpanded, !model.isRequestPanelOpen {
                     TooltipCard(
                         snapshot: snapshot,
                         activity: model.activity(for: snapshot),

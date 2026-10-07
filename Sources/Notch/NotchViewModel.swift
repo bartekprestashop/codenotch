@@ -70,6 +70,13 @@ final class NotchViewModel: ObservableObject {
     /// being one.
     @Published var sessions: [String: [AgentSession]] = [:]
 
+    /// Explicit questions from agents, independent of provider usage.
+    @Published var actionRequests: [ActionRequest] = []
+    @Published var isRequestPanelOpen = false
+    var onShowRequests: (() -> Void)?
+
+    var staysOpenForRequests: Bool { !actionRequests.isEmpty }
+
     /// Which cell the cursor is over, if any. Driven from the window controller
     /// rather than SwiftUI's `.onHover`: the panel ignores mouse events until
     /// the cursor is over it, so SwiftUI cannot see the crossing that turns

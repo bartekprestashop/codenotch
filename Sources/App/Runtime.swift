@@ -11,6 +11,9 @@ import Foundation
 /// them up at once, over whatever was being worked on, for the half minute the
 /// suite took.
 enum Runtime {
+    static var isQABundle: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "CodenotchQAMode") as? Bool == true
+    }
     static let isUnderTest: Bool =
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
             || NSClassFromString("XCTestCase") != nil

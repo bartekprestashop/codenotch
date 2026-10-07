@@ -411,6 +411,7 @@ struct SettingsView: View {
     /// Whether Accounts shows its provider panes. Remembered, so someone who
     /// folds the group away finds it folded next time.
     @AppStorage("settingsAccountsExpanded") private var accountsExpanded = true
+    @AppStorage("actionReminderMinutes") private var actionReminderMinutes = 15
     @Namespace private var selectionSpace
     /// The provider being dragged right now.
     ///
@@ -1201,6 +1202,18 @@ struct SettingsView: View {
 
     private var notificationsPane: some View {
         Form {
+            Section(L10n.t("Agent requests")) {
+                Toggle(L10n.t("Play a sound for new requests"), isOn: $preferences.actionRequestSound)
+                SoundRow(label: L10n.t("Request sound"), name: $preferences.actionRequestSoundName,
+                         pickerEnabled: preferences.actionRequestSound)
+                Stepper(value: $actionReminderMinutes, in: 5...1440, step: 5) {
+                    Text("Telegram reminder after \(actionReminderMinutes) minutes")
+                }
+                Text(L10n.t("One reminder per open request. Store the bot token and chat ID in Keychain; without them, no message is sent."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             // First, because it changes what every switch below does. One
             // choice for all of them: the reasons for a banner (a second
             // display, a hidden notch) or for the notch (nothing in

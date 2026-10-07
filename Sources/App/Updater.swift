@@ -58,6 +58,7 @@ final class Updater: NSObject, ObservableObject, SPUUpdaterDelegate {
 
     /// The one waiting, offered again: the card back in the notch.
     func reoffer() {
+        guard !Runtime.isQABundle else { return }
         if pendingIsPreview { preview() } else { checkNow() }
     }
 
@@ -69,21 +70,22 @@ final class Updater: NSObject, ObservableObject, SPUUpdaterDelegate {
     /// rather than only hiding them. Never downloads unasked: what is found is
     /// offered in the notch first.
     var automatic: Bool {
-        get { sparkle.automaticallyChecksForUpdates }
-        set { sparkle.automaticallyChecksForUpdates = newValue }
+        get { Runtime.isQABundle ? false : sparkle.automaticallyChecksForUpdates }
+        set { if !Runtime.isQABundle { sparkle.automaticallyChecksForUpdates = newValue } }
     }
 
     var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
     }
 
-    var lastChecked: Date? { sparkle.lastUpdateCheckDate }
+    var lastChecked: Date? { Runtime.isQABundle ? nil : sparkle.lastUpdateCheckDate }
 
     /// Starts the scheduled checks, and checks now — so an update out since it
     /// last ran is offered as it launches. Deliberately not in `init`: the
     /// updater is lazy so that `self` exists before it is handed over as the
     /// delegate.
     func start() {
+        guard !Runtime.isQABundle else { return }
         guard !started else { return }
         started = true
         sparkle.automaticallyDownloadsUpdates = false
@@ -127,6 +129,7 @@ final class Updater: NSObject, ObservableObject, SPUUpdaterDelegate {
     /// download and install played out — for a version that is not there.
     /// Nothing is fetched and nothing installed.
     func preview() {
+        guard !Runtime.isQABundle else { return }
         previewRun &+= 1
         previewing = true
         answer = nil
@@ -218,6 +221,7 @@ final class Updater: NSObject, ObservableObject, SPUUpdaterDelegate {
     /// This one *does* show UI — it was asked for, so silence would read as a
     /// broken button.
     func checkNow() {
+        guard !Runtime.isQABundle else { return }
         start()
         outcome = .checking
         sparkle.checkForUpdates()

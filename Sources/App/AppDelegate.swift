@@ -4,6 +4,7 @@ import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notchFleet: NotchFleet?
+    private var actionRequests: ActionRequestMonitor?
     private var store: UsageStore?
     var phoneLinkServer: PhoneLinkServer?
     var phoneLinkServerStatus: PhoneLinkServerStatus?
@@ -82,10 +83,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// any `~/.claude-<slug>` — found once at launch. Each gets a usage
     /// provider and a session monitor of its own, keyed by the same id, so a
     /// work login's sessions spin the work ring and nobody else's.
-    private let claudeProfiles = ClaudeProfile.discover()
-    private let codexProfiles = CodexProfile.discover()
-    private let antigravityProfiles = AntigravityProfile.discover()
-    private let commandCodeProfiles = CommandCodeProfile.discover()
+    private lazy var claudeProfiles = ClaudeProfile.discover()
+    private lazy var codexProfiles = CodexProfile.discover()
+    private lazy var antigravityProfiles = AntigravityProfile.discover()
+    private lazy var commandCodeProfiles = CommandCodeProfile.discover()
     /// Held as concrete providers, not just handed to the store: the token
     /// refresher needs to ask one of them how long its token has left, and the
     /// protocol has no business carrying that.
@@ -101,6 +102,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // replaces this a moment later, once preferences exist.
         NSApp.setActivationPolicy(.regular)
         guard !isRunningTests else { return }
+        if Bundle.main.object(forInfoDictionaryKey: "CodenotchQAMode") as? Bool == true {
+            MainActor.assumeIsolated { launchIsolatedQA() }
+            return
+        }
         Self.retireOlderInstances()
         ChannelNotifications.installPresenter()
 
@@ -117,6 +122,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // notch would already have flashed on the default edge.
         let fleet = NotchFleet(scope: preferences.notchScope, edge: preferences.notchEdge)
         self.notchFleet = fleet
+        let demo = ProcessInfo.processInfo.environment["CODENOTCH_DEMO"] == "1"
+        let qaDirectory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Codenotch QA/ActionRequests",
+                                  isDirectory: true)
+        let requestStore: ActionRequestStore
+        if demo {
+            requestStore = ActionRequestStore(directory: qaDirectory)
+        } else if let directory = ProcessInfo.processInfo.environment["CODENOTCH_REQUEST_DIRECTORY"] {
+            requestStore = ActionRequestStore(directory: URL(fileURLWithPath: directory, isDirectory: true))
+        } else {
+            requestStore = ActionRequestStore()
+        }
+        let actionRequests = demo
+            ? ActionRequestMonitor(store: requestStore, credentials: { nil })
+            : ActionRequestMonitor(store: requestStore)
+        self.actionRequests = actionRequests
+        actionRequests.onNewRequests = { [weak preferences] in
+            guard let preferences, preferences.actionRequestSound else { return }
+            SessionChime.play(preferences.actionRequestSoundName)
+        }
+        actionRequests.$requests
+            .receive(on: RunLoop.main)
+            .sink { [weak fleet] requests in fleet?.apply(actionRequests: requests) }
+            .store(in: &cancellables)
+        fleet.onResolveRequest = { [weak actionRequests] key in actionRequests?.resolve(key) }
+        fleet.currentRequest = { [weak actionRequests] id in actionRequests?.current(id: id) }
 
         // `CODENOTCH_DEMO=1` puts the design frame's three providers on screen
         // with its numbers, for screenshots and for eyeballing the layout.
@@ -170,25 +201,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let customProviders: [UsageProvider] = preferences.customEndpoints.filter(\.isEnabled).map { endpoint in
                 CustomEndpointProvider(endpoint: endpoint)
             }
-            let allProviders: [UsageProvider] = claudeProviders
-                + [CursorLocalProvider()]
-                + codexProfiles.map { CodexLocalProvider(profile: $0) }
-                + antigravityProfiles.map { AntigravityProvider(profile: $0) }
-                + [GLMProvider(), MiniMaxProvider(web: miniMaxWeb), GrokLocalProvider(), DevinLocalProvider(), OpenCodeProvider()]
-                + commandCodeProfiles.map { CommandCodeProvider(profile: $0) }
-                + [GitHubCopilotProvider(), KimiProvider(), KiroProvider(), AmpProvider(),
-                   ApifyProvider(), KiloProvider(),
-                   OllamaLocalProvider(endpoint: URL(string: preferences.ollamaEndpoint)!),
-                   LMStudioLocalProvider(endpoint: URL(string: preferences.lmstudioEndpoint)!),
-                   OllamaProvider(),
-                   // A closure, not the value: the provider is an actor and
-                   // re-reads the budget on every fetch, so a ceiling typed
-                   // into Settings applies without a restart.
-                   GeminiAPIProvider(budget: {
-                       Preferences.storedGeminiAPIMonthlyTokenBudget()
-                   })]
-                + webProviders
-                + customProviders
+            var allProviders: [UsageProvider] = claudeProviders
+            allProviders.append(CursorLocalProvider())
+            allProviders += codexProfiles.map { CodexLocalProvider(profile: $0) }
+            allProviders += antigravityProfiles.map { AntigravityProvider(profile: $0) }
+            allProviders += [GLMProvider(), MiniMaxProvider(web: miniMaxWeb),
+                             GrokLocalProvider(), DevinLocalProvider(), OpenCodeProvider()]
+            allProviders += commandCodeProfiles.map { CommandCodeProvider(profile: $0) }
+            allProviders += [GitHubCopilotProvider(), KimiProvider(), KiroProvider(),
+                             AmpProvider(), ApifyProvider(), KiloProvider()]
+            allProviders += [OllamaLocalProvider(endpoint: URL(string: preferences.ollamaEndpoint)!),
+                             LMStudioLocalProvider(endpoint: URL(string: preferences.lmstudioEndpoint)!),
+                             OllamaProvider()]
+            // The actor re-reads the budget on every fetch.
+            allProviders.append(GeminiAPIProvider(budget: {
+                Preferences.storedGeminiAPIMonthlyTokenBudget()
+            }))
+            allProviders += webProviders
+            allProviders += customProviders
             preferences.reconcile(discoveredIDs: allProviders.map(\.id))
             let store = UsageStore(
                 providers: allProviders,
@@ -1031,6 +1061,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fleet.apply(deepSeekPricingEnabled: preferences.deepSeekPricingEnabled)
         fleet.apply(deepSeekPricingSchedule: preferences.deepSeekPricingSchedule)
         fleet.show()
+        actionRequests.start()
+    }
+
+    /// A separate bundle has no route to real providers, Keychain credentials,
+    /// Phone Link, Sparkle, or the normal request file. Environment variables
+    /// cannot override these boundaries.
+    @MainActor private func launchIsolatedQA() {
+        let preferences = Preferences()
+        self.preferences = preferences
+        let fleet = NotchFleet(scope: .mainDisplay, edge: preferences.notchEdge)
+        self.notchFleet = fleet
+        fleet.setSnapshots(Fixtures.snapshots())
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Codenotch QA/ActionRequests",
+                                  isDirectory: true)
+        let monitor = ActionRequestMonitor(store: ActionRequestStore(directory: directory),
+                                           credentials: { nil })
+        self.actionRequests = monitor
+        monitor.onNewRequests = { [weak preferences] in
+            guard let preferences, preferences.actionRequestSound else { return }
+            SessionChime.play(preferences.actionRequestSoundName)
+        }
+        monitor.$requests
+            .receive(on: RunLoop.main)
+            .sink { [weak fleet] requests in fleet?.apply(actionRequests: requests) }
+            .store(in: &cancellables)
+        fleet.onResolveRequest = { [weak monitor] key in monitor?.resolve(key) }
+        fleet.currentRequest = { [weak monitor] id in monitor?.current(id: id) }
+        let updater = Updater() // Never started; Runtime rejects all update actions in QA.
+        let settings = SettingsWindowController(
+            preferences: preferences, providers: { [] }, updater: updater,
+            signOut: { _ in }, signIn: { _ in false }, switchAccount: { _ in false },
+            retry: { _ in },
+            resetPosition: { [weak fleet, weak preferences] in
+                guard let preferences else { return }
+                preferences.setOffset(0, for: preferences.notchEdge)
+                fleet?.apply(alongOffset: 0)
+            },
+            quit: { NSApp.terminate(nil) }
+        )
+        self.settings = settings
+        fleet.onOpenSettings = { [weak settings] in settings?.show() }
+        preferences.$notchEdge
+            .receive(on: RunLoop.main)
+            .sink { [weak fleet, weak preferences] edge in
+                fleet?.apply(alongOffset: preferences?.offset(for: edge) ?? 0)
+                fleet?.apply(edge: edge)
+            }
+            .store(in: &cancellables)
+        fleet.onReposition = { [weak preferences] offset in
+            guard let preferences else { return }
+            preferences.setOffset(offset, for: preferences.notchEdge)
+        }
+        fleet.onMoveToEdge = { [weak preferences] edge, offset in
+            guard let preferences else { return }
+            if let offset { preferences.setOffset(offset, for: edge) }
+            preferences.notchEdge = edge
+        }
+        fleet.apply(alongOffset: preferences.offset(for: preferences.notchEdge))
+        fleet.apply(scale: preferences.notchScale)
+        fleet.show()
+        monitor.start()
     }
 
     /// Open the notch, and make a noise, when something has just finished.
@@ -1257,6 +1349,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        actionRequests?.stop()
         ollamaRelay?.configure(enabled: false, endpoint: OllamaEndpoint.defaultAddress)
         lmstudioMetrics?.stop()
         tokenRefresher?.stop()

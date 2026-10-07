@@ -45,6 +45,9 @@ final class NotchFleet {
     /// merged dict after a fan-out, the same way it read `controller.model
     /// .sessions` before there was more than one controller.
     private(set) var sessions: [String: [AgentSession]] = [:]
+    private var actionRequests: [ActionRequest] = []
+    var onResolveRequest: ((ActionRequestKey) -> Void)?
+    var currentRequest: ((String) -> ActionRequest?)?
     /// Which display a single, unassigned controller should sit on. Only
     /// consulted by `.mainDisplay` — every controller under `.allDisplays`
     /// already has its own `assignedScreen`, which wins over this in
@@ -301,6 +304,19 @@ final class NotchFleet {
         }
     }
 
+    func apply(actionRequests: [ActionRequest]) {
+        self.actionRequests = actionRequests
+        for controller in controllers.values {
+            controller.model.actionRequests = actionRequests
+            if !actionRequests.isEmpty && visibility != .hidden {
+                controller.model.isExpanded = true
+                controller.relocate()
+            } else if actionRequests.isEmpty {
+                controller.cursorMoved()
+            }
+        }
+    }
+
     func setThinkingModels(_ thinking: [String: Date]) {
         thinkingModels = thinking
         for model in models {
@@ -484,6 +500,8 @@ final class NotchFleet {
         controller.model.updatePending = updatePending
         controller.onReposition = onReposition
         controller.onMoveToEdge = onMoveToEdge
+        controller.onResolveRequest = onResolveRequest
+        controller.currentRequest = currentRequest
         controller.signInItems = signInItems
         controller.model.updateSnapshots(snapshots)
         controller.model.thinkingModels = thinkingModels
@@ -495,8 +513,13 @@ final class NotchFleet {
         controller.model.updateLedger(ledger)
         controller.model.refreshing = refreshing
         controller.model.sessions = sessions
+        controller.model.actionRequests = actionRequests
         controller.model.now = Date()
         controller.apply(visibility)
+        if !actionRequests.isEmpty && visibility != .hidden {
+            controller.model.isExpanded = true
+            controller.relocate()
+        }
         controller.show()
         return controller
     }
