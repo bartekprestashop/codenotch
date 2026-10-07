@@ -18,7 +18,7 @@ still working, done, or waiting on you.**
 > **Fork note:** This branch is based on [Vinz's Codenotch 1.22](https://github.com/vinzdg/codenotch)
 > and adds agent requests in the notch, a configurable request sound and delayed Telegram
 > reminder, a request CLI, and an isolated QA build. See
-> [Agent requests](docs/action-requests.md). The download links below point to
+> [fork changes](docs/fork-changes.md) and [agent requests](docs/action-requests.md). The download links below point to
 > the original project's releases; no release of this fork is published.
 > This fork build does not check or install upstream updates, which would
 > replace the local changes. Future fork updates require a separately reviewed
@@ -312,10 +312,12 @@ the icon comes back. Its menu has the full readings either way.
 
 ## Updates
 
-Codenotch updates itself. [Sparkle](https://sparkle-project.org) checks daily
-and installs in the background without prompting; Settings says so and can
-switch it off. Every update is EdDSA-signed, so nothing installs that wasn't
-built and signed by the maintainer.
+Official upstream releases use [Sparkle](https://sparkle-project.org) for
+signed updates. **This fork does not check or install upstream updates.** Its
+build has no upstream appcast or signing key, and Settings explains that a
+reviewed fork build must be installed manually. Installing an official
+upstream release over this fork would remove the fork's additions. A future
+fork update channel would need its own reviewed feed and signing identity.
 
 ## Building
 
