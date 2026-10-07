@@ -50,6 +50,12 @@ separate review and installation until a fork-owned update channel exists.
 
 The port and updater guard passed 2,138 tests with 9 skipped and no failures.
 Independent QA checked the request CLI, file permissions, focused reminder
-and position tests, and the isolated UI flow. Real Telegram delivery, audible
-notification from a new request, opening a private Codex chat, and manual
-drag on the user's displays remain acceptance checks for an installed build.
+and position tests, and the isolated UI flow. On the installed build,
+Option-drag worked and saved a right-edge offset. Real Telegram delivery,
+audible notification from a new request, and the exact private chat destination
+remain separate acceptance checks.
+
+For local ad-hoc signing, `make install` disables hardened runtime. A Release
+app with both ad-hoc signing and hardened runtime cannot load its embedded
+Sparkle framework on macOS. A future Developer ID-signed release retains the
+project's hardened-runtime default.

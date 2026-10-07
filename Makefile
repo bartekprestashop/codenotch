@@ -47,7 +47,12 @@ DEV_TEAM := $(if $(DEV_IDENTITY),$(shell security find-certificate -c "$(DEV_IDE
 
 ifeq (,$(HAS_DEVELOPER_ID))
 ifeq (,$(DEV_TEAM))
-DEV_SIGN := CODE_SIGN_IDENTITY="-" DEVELOPMENT_TEAM="" CODE_SIGN_STYLE=Automatic
+# An ad-hoc Release app has no Team ID. With hardened runtime, dyld refuses
+# the embedded Sparkle framework even when both signatures verify. The local
+# build uses the same non-hardened mode as the working ad-hoc Debug build;
+# signed, notarized releases keep the project's hardened-runtime default.
+DEV_SIGN := CODE_SIGN_IDENTITY="-" DEVELOPMENT_TEAM="" CODE_SIGN_STYLE=Automatic \
+	ENABLE_HARDENED_RUNTIME=NO
 else
 DEV_SIGN := CODE_SIGN_IDENTITY="Apple Development" CODE_SIGN_STYLE=Manual \
 	DEVELOPMENT_TEAM="$(DEV_TEAM)" PROVISIONING_PROFILE_SPECIFIER=""
