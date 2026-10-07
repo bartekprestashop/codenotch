@@ -28,6 +28,16 @@ Hover a ring for its limit windows and when they reset. Claude's ring shows the
 same **current session** window Claude Code's own `/usage` leads with, so the
 two never disagree.
 
+## Why this fork
+
+Codenotch already keeps coding assistant activity and usage limits in view.
+This fork gives agents a visible way to ask for a human decision: an open
+request appears on the notch, and its panel links to the relevant Codex chat
+so you can resume the work without hunting for the task. An optional sound
+draws attention to new requests, while a delayed Telegram reminder can reach
+you when you are away from the Mac. This is an independent addition to the
+original project, not an official feature or a replacement for Telegram.
+
 ## Download
 
 [![Download for macOS](docs/design/download-macos.svg)](https://github.com/vinzdg/codenotch/releases/latest/download/Codenotch.dmg)
