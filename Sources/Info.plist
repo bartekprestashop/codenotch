@@ -36,6 +36,8 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CodenotchForkBuild</key>
+	<true/>
 	<key>LSMinimumSystemVersion</key>
 	<string>15.0</string>
 	<key>NSAppTransportSecurity</key>
@@ -54,12 +56,6 @@
 	<key>SUAutomaticallyUpdate</key>
 	<false/>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
-	<key>SUFeedURL</key>
-	<string>https://hivinz.com/appcast.xml</string>
-	<key>SUPublicEDKey</key>
-	<string>rmUfT5r49nR+3HdkbR5/YYLghfnAi6L49eOk3sIegSk=</string>
-	<key>SUScheduledCheckInterval</key>
-	<integer>86400</integer>
+	<false/>
 </dict>
 </plist>

@@ -6,6 +6,17 @@ import XCTest
 /// ends any other way, or never reports back, still lands somewhere.
 @MainActor
 final class UpdaterOutcomeTests: XCTestCase {
+    func testForkDoesNotUseUpstreamUpdater() {
+        XCTAssertTrue(Runtime.isForkBuild)
+        XCTAssertFalse(Runtime.updatesEnabled)
+        let updater = Updater()
+        XCTAssertFalse(updater.automatic)
+        updater.start()
+        updater.checkNow()
+        XCTAssertEqual(updater.outcome, .idle)
+        XCTAssertNil(updater.lastChecked)
+    }
+
     func testACycleThatEndsSilentlyClearsChecking() {
         XCTAssertEqual(Updater.outcome(afterCycleFrom: .checking, errorCode: nil), .idle)
     }

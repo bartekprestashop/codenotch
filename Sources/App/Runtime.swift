@@ -14,6 +14,14 @@ enum Runtime {
     static var isQABundle: Bool {
         Bundle.main.object(forInfoDictionaryKey: "CodenotchQAMode") as? Bool == true
     }
+    static var isForkBuild: Bool {
+        #if CODENOTCH_FORK
+        true
+        #else
+        Bundle.main.object(forInfoDictionaryKey: "CodenotchForkBuild") as? Bool == true
+        #endif
+    }
+    static var updatesEnabled: Bool { !isQABundle && !isForkBuild }
     static let isUnderTest: Bool =
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
             || NSClassFromString("XCTestCase") != nil

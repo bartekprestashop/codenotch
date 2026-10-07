@@ -20,6 +20,9 @@ still working, done, or waiting on you.**
 > reminder, a request CLI, and an isolated QA build. See
 > [Agent requests](docs/action-requests.md). The download links below point to
 > the original project's releases; no release of this fork is published.
+> This fork build does not check or install upstream updates, which would
+> replace the local changes. Future fork updates require a separately reviewed
+> build.
 
 Hover a ring for its limit windows and when they reset. Claude's ring shows the
 same **current session** window Claude Code's own `/usage` leads with, so the
