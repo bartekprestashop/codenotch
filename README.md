@@ -2,8 +2,10 @@
 
 This is an independent macOS fork of [Codenotch by Vinz](https://github.com/vinzdg/codenotch),
 based on upstream 1.22. It keeps the original [MIT license](LICENSE) and
-Vinz's attribution. This checkout is a local **1.22.3** (build 27) candidate;
-the latest public source tag is [`fork-v1.22.1`](https://github.com/bartekprestashop/codenotch/tree/fork-v1.22.1).
+Vinz's attribution. The current fork source is **1.22.3** (build 27),
+verified in a local installation. The latest source tag remains
+[`fork-v1.22.1`](https://github.com/bartekprestashop/codenotch/tree/fork-v1.22.1);
+1.22.3 is available from the `main` branch without a new tag or binary release.
 
 **This fork is published as source code only.** There is no fork DMG, installer,
 binary GitHub Release, or update feed. The upstream app's downloads do not
@@ -17,7 +19,8 @@ the inherited `windows/` project does not contain them.
   All, Preparation, Coding and QA. Each row shows progress, an independent
   signal and the last update date; clicking it opens the relevant Codex chat.
   Agents update it through `codenotch-task`. Completed tasks stay in the file
-  and can be resumed; see [task board instructions](docs/task-board.md).
+  and can be resumed. The panel only displays and links tasks; it has no
+  controls for changing substatus or progress. See [task board instructions](docs/task-board.md).
 - **Requests from agents.** `codenotch-request` opens a request with a stable ID,
   project, task, question, and Codex chat UUID. The notch shows an orange count
   of open requests; a dark panel shows the question and opens the related Codex
@@ -43,7 +46,37 @@ The original app's usage rings, provider adapters, session states, reset
 times, placement controls, and other features remain available. See the
 [fork changelog](CHANGELOG.md) for this version and the focused documentation
 for [agent requests](docs/action-requests.md), [Codex workday pace](docs/codex-workday-pace.md),
-and [all fork changes](docs/fork-changes.md).
+and [all fork changes](docs/fork-changes.md). Fictional examples of both local
+JSON formats are in [agent requests](docs/action-requests.md) and the
+[task board instructions](docs/task-board.md).
+
+## Getting started with local agent data
+
+Both CLIs write to the same directory:
+`~/Library/Application Support/Codenotch/ActionRequests/`. They create that
+directory and their files automatically, so you do not need to paste JSON by
+hand. Requests use `requests.json`; the task board uses `task-board.json`.
+Build the tools and provide the UUID of a real Codex chat through
+`CODEX_THREAD_ID` (or pass `--thread` explicitly):
+
+```sh
+make request-cli task-cli
+./build/codenotch-request open --id example:review --project Example \
+  --task 'Review plan' --message 'Please review the plan.' \
+  --thread "$CODEX_THREAD_ID"
+./build/codenotch-task upsert --id example:catalog --title 'Catalog work' \
+  --thread "$CODEX_THREAD_ID" --total 5 --completed 1
+./build/codenotch-task substatus --id example:catalog --value coding
+```
+
+The [fictional `requests.json` example](docs/examples/requests.json) and
+[fictional `task-board.json` example](docs/examples/task-board.json) show the
+complete on-disk formats. Their UUIDs and titles are invented; do not use
+them as real chat links. Field descriptions and update commands are in
+[agent requests](docs/action-requests.md) and [task board](docs/task-board.md).
+Codenotch reads and links board tasks; agents update them with the CLI. Telegram
+reminders are optional and require separate [Keychain setup](docs/action-requests.md#telegram-reminder).
+Neither the local board nor the in-app request panel requires Telegram.
 
 ## Build and run on macOS
 

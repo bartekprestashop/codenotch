@@ -37,6 +37,22 @@ create a second reminder. Resolve the ID before opening a new question with
 that ID. The command rejects invalid thread UUIDs, overlong fields, and
 missing required fields.
 
+## Local JSON format
+
+The CLI creates the directory and `requests.json` on its first write. It is a
+JSON **array** of open requests; an empty array means there are none. See the
+[complete fictional example](examples/requests.json). `id` identifies one
+question; `project`, `task` and `message` are shown in the notch and can also
+appear in the optional Telegram reminder. `threadID` is the Codex chat UUID,
+and optional `hostID` selects its host. `createdAt` and `expiresAt` are JSON
+numbers in seconds since **2001-01-01 00:00:00 UTC**, Swift's reference date,
+not Unix timestamps. The example's future dates and UUIDs are invented.
+`generation` distinguishes a reopened ID; older records may omit it.
+`reminderClaimedAt` is absent until the app claims a reminder, then uses the
+same date format. The CLI manages these fields and writes owner-only files;
+use `open` and `resolve` rather than editing JSON. Codenotch displays and
+links requests, and may update expiry or reminder state in this file.
+
 Keep the message brief and free of secrets. The request file is stored with
 owner-only permissions. The app polls it while running; no message is sent
 when the app is closed. The chat link requires Codex to handle the `codex:`

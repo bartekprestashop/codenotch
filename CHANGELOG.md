@@ -5,7 +5,7 @@ It keeps the original [MIT license](LICENSE) and attribution. Version numbers
 refer to this fork's source; download links in the README lead to upstream
 binary releases unless stated otherwise.
 
-## 1.22.3 local candidate — 2026-10-09
+## 1.22.3 source version — 2026-10-09
 
 - Added four read-only task board filters: Wszystkie, Przygotowanie, Kodowanie
   and QA, with counts of active tasks. The default shows all active tasks.
@@ -15,9 +15,18 @@ binary releases unless stated otherwise.
 - Preserved the compact task rows and added regression tests for legacy data
   and idempotent substatus changes. The board remains a display and link
   surface; agents manage task data through the CLI.
+- Documented the local JSON directory, both CLI workflows and fictional
+  examples of request and task-board documents.
 
-This candidate is for local verification. No GitHub publication or binary
-release has been created for 1.22.3.
+Verification: 2,162 tests ran with nine skipped and no failures. Independent
+QA passed focused model, CLI and visual checks, including 15 tasks and the
+reopen-height fix. The local 1.22.3 app was installed and signed; the user
+confirmed that clicking a task opens the correct Codex chat. Other monitor
+layouts remain unverified. The request panel and optional delayed Telegram
+reminder from the 1.22 port remain available.
+
+The 1.22.3 source is on the fork's `main` branch. No new tag, binary release,
+installer or update feed was created.
 
 ## 1.22.2 local candidate — 2026-10-09
 

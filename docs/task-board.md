@@ -49,7 +49,11 @@ The file is a JSON object with `schemaVersion: 1` and a `tasks` array. Each
 record has stable `id`, `title`, `completed`, `total`, `lifecycle`, `signal`,
 `substatus`, `conversations` (`threadID`, optional `hostID`), `coordinatorThreadID`, optional
 `signalThreadID`, immutable `createdAt`, and `updatedAt`. Dates are encoded by
-Swift's `JSONEncoder` as seconds from Apple's reference date. The displayed
+Swift's `JSONEncoder` as seconds since **2001-01-01 00:00:00 UTC**, not Unix
+timestamps. The [complete fictional task-board example](examples/task-board.json)
+shows the document shape. `coordinatorThreadID` identifies the ordinary row
+link; optional `signalThreadID` can route an active signal to another recorded
+conversation. The example's UUID and dates are invented. The displayed
 date is `updatedAt`, and identical retries do not change it. The store checks
 `0 <= completed <= total`, valid thread UUIDs, and schema version before
 writing; a lock and atomic file replacement protect concurrent agents.
@@ -57,7 +61,7 @@ writing; a lock and atomic file replacement protect concurrent agents.
 For isolated CLI testing, set `CODENOTCH_TASK_DIRECTORY` to a scratch folder.
 The separate CodenotchQA app reads its own QA Application Support folder.
 
-## Verification for the 1.22.3 local candidate
+## Verification for 1.22.3
 
 The full Xcode suite passed with **2,162 tests, nine skipped and zero
 failures**. The Release build and strict code-signature verification passed.
@@ -71,10 +75,10 @@ after scrolling.
 
 The local 1.22.3 app displayed all four filters. Three clearly labeled demo
 records were assigned to different substatus filters without changing their
-progress or signals. The app read account usage normally. A real Codex chat
-destination after row click and layouts on other monitors remain for user
-acceptance testing. The previous app, CLI and board JSON were backed up before
-installation; GitHub was not updated.
+progress or signals. The app read account usage normally. The user manually
+confirmed that clicking a task opened the correct Codex chat. Other monitor
+layouts remain unverified. The previous app, CLI and board JSON were backed
+up before installation.
 
 ## Verification for the 1.22.2 local candidate
 

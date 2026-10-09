@@ -26,5 +26,5 @@ keeps its compact rows, bars and signals. The approved visual prototype is
 Verification: decode legacy JSON, update and retry a substatus through the
 store and CLI, check invariants and link routing, run the full suite and
 Release build, inspect the four filters with 10–15 rows in the isolated QA
-app, obtain independent QA, then back up and replace the local app. Do not
-publish the fork.
+app, obtain independent QA, then back up and replace the local app. Publish
+source only after explicit user approval and a private-data audit.
