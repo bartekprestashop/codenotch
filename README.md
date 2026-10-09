@@ -2,7 +2,7 @@
 
 This is an independent macOS fork of [Codenotch by Vinz](https://github.com/vinzdg/codenotch),
 based on upstream 1.22. It keeps the original [MIT license](LICENSE) and
-Vinz's attribution. This checkout is a local **1.22.2** (build 26) candidate;
+Vinz's attribution. This checkout is a local **1.22.3** (build 27) candidate;
 the latest public source tag is [`fork-v1.22.1`](https://github.com/bartekprestashop/codenotch/tree/fork-v1.22.1).
 
 **This fork is published as source code only.** There is no fork DMG, installer,
@@ -13,7 +13,8 @@ the inherited `windows/` project does not contain them.
 ## What this fork adds
 
 - **Task board.** A small list icon below the usage percentage opens a compact
-  scrollable board of active Codex tasks. Each row shows progress, an independent
+  scrollable board of active Codex tasks. Four tabs filter one task collection:
+  All, Preparation, Coding and QA. Each row shows progress, an independent
   signal and the last update date; clicking it opens the relevant Codex chat.
   Agents update it through `codenotch-task`. Completed tasks stay in the file
   and can be resumed; see [task board instructions](docs/task-board.md).

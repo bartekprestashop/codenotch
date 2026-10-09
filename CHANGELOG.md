@@ -5,6 +5,20 @@ It keeps the original [MIT license](LICENSE) and attribution. Version numbers
 refer to this fork's source; download links in the README lead to upstream
 binary releases unless stated otherwise.
 
+## 1.22.3 local candidate — 2026-10-09
+
+- Added four read-only task board filters: Wszystkie, Przygotowanie, Kodowanie
+  and QA, with counts of active tasks. The default shows all active tasks.
+- Added an independent `substatus` field and `codenotch-task substatus` command.
+  Existing records without the field appear in Przygotowanie; their progress,
+  signals and conversation links remain intact.
+- Preserved the compact task rows and added regression tests for legacy data
+  and idempotent substatus changes. The board remains a display and link
+  surface; agents manage task data through the CLI.
+
+This candidate is for local verification. No GitHub publication or binary
+release has been created for 1.22.3.
+
 ## 1.22.2 local candidate — 2026-10-09
 
 - Added a compact task board opened by a small list icon below the percentage

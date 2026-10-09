@@ -93,6 +93,67 @@ final class TaskBoardTests: XCTestCase {
         XCTAssertThrowsError(try store.upsert(id: "job", title: "A task", coordinator: coordinator))
         XCTAssertEqual(try Data(contentsOf: store.dataURL), data)
     }
+
+    func testLegacyTasksWithoutSubstatusRemainVisibleInAllAndOneFilter() throws {
+        let directory = try scratch()
+        let store = TaskBoardStore(directory: directory)
+        for index in 1...3 {
+            _ = try store.upsert(id: "demo-\(index)", title: "Example \(index)",
+                                 coordinator: coordinator, total: 7, completed: index)
+        }
+        _ = try store.setSignal(id: "demo-2", signal: .problem, source: source)
+        var document = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: Data(contentsOf: store.dataURL)) as? [String: Any])
+        var tasks = try XCTUnwrap(document["tasks"] as? [[String: Any]])
+        for index in tasks.indices { tasks[index].removeValue(forKey: "substatus") }
+        document["tasks"] = tasks
+        try JSONSerialization.data(withJSONObject: document).write(to: store.dataURL)
+
+        let legacy = try store.active()
+        XCTAssertEqual(legacy.count, 3)
+        XCTAssertTrue(legacy.allSatisfy { $0.substatus == .preparation })
+        let before = try XCTUnwrap(legacy.first { $0.id == "demo-2" })
+        let moved = try store.setSubstatus(id: "demo-2", substatus: .qa,
+                                       now: before.updatedAt.addingTimeInterval(1))
+        XCTAssertEqual(moved.substatus, .qa)
+        XCTAssertEqual(moved.completed, 2)
+        XCTAssertEqual(moved.total, 7)
+        XCTAssertEqual(moved.signal, .problem)
+        XCTAssertEqual(moved.openThreadID, source.threadID)
+        XCTAssertEqual(moved.conversations, before.conversations)
+        XCTAssertEqual(try store.active().filter { $0.substatus == .preparation }.count, 2)
+        XCTAssertEqual(try store.active().filter { $0.substatus == .qa }.count, 1)
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent("requests.json").path))
+    }
+
+    func testSubstatusRetryDoesNotRewriteDocumentOrResetProgress() throws {
+        let store = TaskBoardStore(directory: try scratch())
+        _ = try store.upsert(id: "job", title: "A task", coordinator: coordinator,
+                             total: 9, completed: 4)
+        let changed = try store.setSubstatus(id: "job", substatus: .coding)
+        let bytes = try Data(contentsOf: store.dataURL)
+        let retry = try store.setSubstatus(id: "job", substatus: .coding,
+                                       now: changed.updatedAt.addingTimeInterval(60))
+        XCTAssertEqual(retry.updatedAt, changed.updatedAt)
+        XCTAssertEqual(retry.completed, 4)
+        XCTAssertEqual(try Data(contentsOf: store.dataURL), bytes)
+    }
+
+    func testUnknownSubstatusIsRejectedWithoutOverwritingData() throws {
+        let store = TaskBoardStore(directory: try scratch())
+        _ = try store.upsert(id: "job", title: "A task", coordinator: coordinator)
+        var document = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: Data(contentsOf: store.dataURL)) as? [String: Any])
+        var tasks = try XCTUnwrap(document["tasks"] as? [[String: Any]])
+        tasks[0]["substatus"] = "unknown"
+        document["tasks"] = tasks
+        let invalidData = try JSONSerialization.data(withJSONObject: document)
+        try invalidData.write(to: store.dataURL)
+        XCTAssertThrowsError(try store.active())
+        XCTAssertThrowsError(try store.setSubstatus(id: "job", substatus: .qa))
+        XCTAssertEqual(try Data(contentsOf: store.dataURL), invalidData)
+    }
 }
 
 @MainActor

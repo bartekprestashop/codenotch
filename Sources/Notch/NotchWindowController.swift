@@ -47,6 +47,7 @@ final class NotchWindowController {
     private var panel: NotchPanel?
     private var requestPanel: RequestPanel?
     private var taskBoardPanel: RequestPanel?
+    private var selectedTaskSubstatus: TaskSubstatus?
     private var hostingView: NotchHostingView<NotchRootView>?
 
     /// The display this notch belongs to. Nil follows the menu-bar screen,
@@ -2213,11 +2214,13 @@ final class NotchWindowController {
     }
 
     func showTaskBoard() {
-        guard panel != nil, let frame = taskBoardFrame() else { return }
+        guard panel != nil else { return }
         if let taskBoardPanel, taskBoardPanel.isVisible {
             taskBoardPanel.close()
             return
         }
+        selectedTaskSubstatus = nil
+        guard let frame = taskBoardFrame() else { return }
         requestPanel?.close()
         let board = RequestPanel(contentRect: frame)
         board.onClose = { [weak self] in
@@ -2238,7 +2241,10 @@ final class NotchWindowController {
         let screen = notch.screen ?? currentScreen()
         let visible = screen?.visibleFrame ?? notch.frame
         let width = min(TaskBoardPanelView.preferredWidth, visible.width - 24)
-        let height = min(TaskBoardPanelView.height(for: model.boardTasks.count), visible.height - 24)
+        let selectedCount = selectedTaskSubstatus.map { substatus in
+            model.boardTasks.filter { $0.substatus == substatus }.count
+        } ?? model.boardTasks.count
+        let height = min(TaskBoardPanelView.height(for: selectedCount), visible.height - 24)
         let button = placement.point(along: model.taskButtonAlong,
                                      across: model.notchDepth / 2)
         let anchor = CGPoint(x: notch.frame.minX + button.x,
@@ -2258,7 +2264,12 @@ final class NotchWindowController {
 
     private func taskBoardContent(width: CGFloat, height: CGFloat) -> TaskBoardPanelView {
         TaskBoardPanelView(
-            tasks: model.boardTasks, width: width, height: height,
+            tasks: model.boardTasks, selectedSubstatus: selectedTaskSubstatus,
+            width: width, height: height,
+            selectSubstatus: { [weak self] substatus in
+                self?.selectedTaskSubstatus = substatus
+                self?.refreshTaskBoardPanel()
+            },
             open: { [weak self] id, updatedAt in
                 guard let self, let current = self.currentTask?(id),
                       current.updatedAt == updatedAt, let link = current.deepLink else { return }

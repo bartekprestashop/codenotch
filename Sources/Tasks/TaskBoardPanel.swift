@@ -3,18 +3,25 @@ import SwiftUI
 
 struct TaskBoardPanelView: View {
     static let preferredWidth: CGFloat = 540
-    static func height(for count: Int) -> CGFloat { min(620, max(110, 70 + CGFloat(count) * 54)) }
+    static func height(for count: Int) -> CGFloat { min(620, max(150, 112 + CGFloat(count) * 54)) }
 
     let tasks: [BoardTask]
+    let selectedSubstatus: TaskSubstatus?
     let width: CGFloat
     let height: CGFloat
+    let selectSubstatus: (TaskSubstatus?) -> Void
     let open: (String, Date) -> Void
     let dismiss: () -> Void
+
+    private var visibleTasks: [BoardTask] {
+        guard let selectedSubstatus else { return tasks }
+        return tasks.filter { $0.substatus == selectedSubstatus }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Tasks")
+                Text("Zadania")
                     .font(.system(size: 17, weight: .semibold))
                 Spacer()
                 Text("\(tasks.count)")
@@ -25,17 +32,40 @@ struct TaskBoardPanelView: View {
                     .padding(.leading, 10)
             }
             .padding(.horizontal, 18)
-            .padding(.vertical, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
 
-            if tasks.isEmpty {
-                Text("No active tasks")
+            Rectangle().fill(Color.white.opacity(0.18)).frame(height: 1)
+                .padding(.horizontal, 18)
+
+            HStack(spacing: 0) {
+                tab("Wszystkie", count: tasks.count, selected: selectedSubstatus == nil) {
+                    selectSubstatus(nil)
+                }
+                ForEach(TaskSubstatus.allCases, id: \.self) { substatus in
+                    tab(substatus.title,
+                        count: tasks.filter { $0.substatus == substatus }.count,
+                        selected: selectedSubstatus == substatus) {
+                        selectSubstatus(substatus)
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 5)
+
+            Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
+                .padding(.horizontal, 18)
+
+            if visibleTasks.isEmpty {
+                Text("Brak aktywnych zadań")
                     .font(.system(size: 13))
                     .foregroundStyle(.gray)
                     .padding(.horizontal, 18)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(tasks) { task in
+                        ForEach(visibleTasks) { task in
                             Button { open(task.id, task.updatedAt) } label: {
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 8) {
@@ -49,8 +79,11 @@ struct TaskBoardPanelView: View {
                                             .foregroundStyle(Color.white.opacity(0.52))
                                             .fixedSize()
                                     }
-                                    progress(task)
-                                        .frame(height: 20)
+                                    HStack(spacing: 0) {
+                                        Spacer(minLength: 0)
+                                        progress(task)
+                                            .frame(width: max(120, (width - 36) * 0.53), height: 20)
+                                    }
                                 }
                                 .padding(.horizontal, 18)
                                 .frame(height: 52)
@@ -69,6 +102,30 @@ struct TaskBoardPanelView: View {
         .background(Color(red: 0.12, green: 0.12, blue: 0.13),
                     in: RoundedRectangle(cornerRadius: 19))
         .environment(\.colorScheme, .dark)
+    }
+
+    private func tab(_ title: String, count: Int, selected: Bool,
+                     action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 0) {
+                HStack(spacing: 4) {
+                    Text(title).lineLimit(1)
+                    Text("\(count)")
+                        .foregroundStyle(selected ? Color(red: 0.84, green: 0.65, blue: 0.13)
+                                         : Color.white.opacity(0.48))
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 34)
+                Rectangle()
+                    .fill(selected ? Color(red: 0.84, green: 0.65, blue: 0.13) : .clear)
+                    .frame(height: 3)
+            }
+            .font(.system(size: 11, weight: selected ? .semibold : .medium))
+            .frame(maxWidth: .infinity)
+            .foregroundStyle(selected ? Color.white : Color.white.opacity(0.55))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title), \(count) active tasks")
     }
 
     private func progress(_ task: BoardTask) -> some View {

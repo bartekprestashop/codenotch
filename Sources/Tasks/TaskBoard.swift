@@ -9,6 +9,18 @@ enum TaskLifecycle: String, Codable {
     case active, completed
 }
 
+enum TaskSubstatus: String, Codable, CaseIterable {
+    case preparation, coding, qa
+
+    var title: String {
+        switch self {
+        case .preparation: return "Przygotowanie"
+        case .coding: return "Kodowanie"
+        case .qa: return "QA"
+        }
+    }
+}
+
 struct BoardConversation: Codable, Equatable {
     let threadID: String
     let hostID: String?
@@ -33,6 +45,7 @@ struct BoardTask: Codable, Identifiable, Equatable {
     var total: Int
     var lifecycle: TaskLifecycle
     var signal: TaskSignal
+    var substatus: TaskSubstatus
     var conversations: [BoardConversation]
     var coordinatorThreadID: String
     var signalThreadID: String?
@@ -45,6 +58,29 @@ struct BoardTask: Codable, Identifiable, Equatable {
 
     var deepLink: URL? {
         conversations.first { $0.threadID == openThreadID }?.deepLink
+    }
+}
+
+extension BoardTask {
+    private enum CodingKeys: String, CodingKey {
+        case id, title, completed, total, lifecycle, signal, substatus, conversations
+        case coordinatorThreadID, signalThreadID, createdAt, updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        title = try values.decode(String.self, forKey: .title)
+        completed = try values.decode(Int.self, forKey: .completed)
+        total = try values.decode(Int.self, forKey: .total)
+        lifecycle = try values.decode(TaskLifecycle.self, forKey: .lifecycle)
+        signal = try values.decode(TaskSignal.self, forKey: .signal)
+        substatus = try values.decodeIfPresent(TaskSubstatus.self, forKey: .substatus) ?? .preparation
+        conversations = try values.decode([BoardConversation].self, forKey: .conversations)
+        coordinatorThreadID = try values.decode(String.self, forKey: .coordinatorThreadID)
+        signalThreadID = try values.decodeIfPresent(String.self, forKey: .signalThreadID)
+        createdAt = try values.decode(Date.self, forKey: .createdAt)
+        updatedAt = try values.decode(Date.self, forKey: .updatedAt)
     }
 }
 
@@ -109,7 +145,7 @@ final class TaskBoardStore {
                 throw StoreError.invalidTask
             }
             document.tasks.append(BoardTask(id: id, title: title, completed: initialCompleted,
-                total: initialTotal, lifecycle: .active, signal: .none,
+                total: initialTotal, lifecycle: .active, signal: .none, substatus: .preparation,
                 conversations: [coordinator], coordinatorThreadID: coordinator.threadID,
                 signalThreadID: nil, createdAt: now, updatedAt: now))
             return document.tasks.count - 1
@@ -127,6 +163,15 @@ final class TaskBoardStore {
             }
             document.tasks[index].total = targetTotal
             document.tasks[index].completed = completed
+            return index
+        }
+    }
+
+    @discardableResult
+    func setSubstatus(id: String, substatus: TaskSubstatus, now: Date = Date()) throws -> BoardTask {
+        try mutate(now: now) { document in
+            let index = try self.index(id, in: document)
+            document.tasks[index].substatus = substatus
             return index
         }
     }

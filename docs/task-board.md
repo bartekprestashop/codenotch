@@ -1,4 +1,4 @@
-# Task board (fork 1.22.2)
+# Task board (fork 1.22.3)
 
 The board is a compact overview of ongoing Codex work. It uses
 `~/Library/Application Support/Codenotch/ActionRequests/task-board.json`, next
@@ -14,6 +14,7 @@ Build the CLI with `make task-cli`. Install or invoke `build/codenotch-task`.
 codenotch-task upsert --id catalog-migration --title "Catalog migration" \
   --thread 11111111-1111-4111-8111-111111111111 --total 7
 codenotch-task progress --id catalog-migration --completed 3
+codenotch-task substatus --id catalog-migration --value coding
 codenotch-task add-thread --id catalog-migration \
   --thread 33333333-3333-4333-8333-333333333333
 codenotch-task signal --id catalog-migration --value needs_user \
@@ -36,9 +37,17 @@ the lifecycle. `complete` retains the record but hides it from the active
 board; `resume` makes it visible again. `list` shows active tasks; `list --all`
 includes completed ones. No command automatically deletes old tasks.
 
+The four tabs filter one collection of active tasks. `Wszystkie` is the
+default and shows every active task. `Przygotowanie`, `Kodowanie` and `QA`
+show tasks with the corresponding `substatus`. Agents change that field with
+`codenotch-task substatus --id ID --value preparation|coding|qa`; the panel
+does not edit task data. Substatus is independent of progress and signal.
+Older records without the field decode as `preparation` and remain visible in
+Wszystkie and Przygotowanie. Completed tasks are absent from all four counts.
+
 The file is a JSON object with `schemaVersion: 1` and a `tasks` array. Each
 record has stable `id`, `title`, `completed`, `total`, `lifecycle`, `signal`,
-`conversations` (`threadID`, optional `hostID`), `coordinatorThreadID`, optional
+`substatus`, `conversations` (`threadID`, optional `hostID`), `coordinatorThreadID`, optional
 `signalThreadID`, immutable `createdAt`, and `updatedAt`. Dates are encoded by
 Swift's `JSONEncoder` as seconds from Apple's reference date. The displayed
 date is `updatedAt`, and identical retries do not change it. The store checks
@@ -47,6 +56,25 @@ writing; a lock and atomic file replacement protect concurrent agents.
 
 For isolated CLI testing, set `CODENOTCH_TASK_DIRECTORY` to a scratch folder.
 The separate CodenotchQA app reads its own QA Application Support folder.
+
+## Verification for the 1.22.3 local candidate
+
+The full Xcode suite passed with **2,162 tests, nine skipped and zero
+failures**. The Release build and strict code-signature verification passed.
+Independent QA passed nine focused model tests, legacy and invalid-data CLI
+checks, permissions and request-store isolation. With 15 tasks in the QA app,
+the filters counted 15 / 12 / 2 / 1 and showed the expected rows. A CLI
+substatus change updated an open panel; completion updated counts and the
+empty view. QA found a reopen-height bug; after the fix, closing a one-row QA
+view and reopening Wszystkie displayed the full list, including the last row
+after scrolling.
+
+The local 1.22.3 app displayed all four filters. Three clearly labeled demo
+records were assigned to different substatus filters without changing their
+progress or signals. The app read account usage normally. A real Codex chat
+destination after row click and layouts on other monitors remain for user
+acceptance testing. The previous app, CLI and board JSON were backed up before
+installation; GitHub was not updated.
 
 ## Verification for the 1.22.2 local candidate
 

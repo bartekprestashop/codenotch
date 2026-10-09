@@ -27,6 +27,10 @@ struct TaskBoardCommand {
                     throw CommandError.usage
                 }
                 _ = try store.progress(id: id, completed: completed, total: try number(options["total"]))
+            case "substatus":
+                guard let id = options["id"], let value = options["value"],
+                      let substatus = TaskSubstatus(rawValue: value) else { throw CommandError.usage }
+                _ = try store.setSubstatus(id: id, substatus: substatus)
             case "add-thread":
                 guard let id = options["id"], let thread = options["thread"] else {
                     throw CommandError.usage
@@ -46,7 +50,7 @@ struct TaskBoardCommand {
             case "list":
                 let tasks = try (options["all"] == "true" ? store.all() : store.active())
                 for task in tasks {
-                    print("\(task.id)\t\(task.lifecycle.rawValue)\t\(task.completed)/\(task.total)\t\(task.signal.rawValue)\t\(task.title)\t\(task.updatedAt)")
+                    print("\(task.id)\t\(task.lifecycle.rawValue)\t\(task.substatus.rawValue)\t\(task.completed)/\(task.total)\t\(task.signal.rawValue)\t\(task.title)\t\(task.updatedAt)")
                 }
             default: throw CommandError.usage
             }

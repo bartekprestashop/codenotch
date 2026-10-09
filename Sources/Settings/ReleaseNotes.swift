@@ -32,6 +32,16 @@ enum ReleaseNotes {
     static var all: [ReleaseNote] {
         [
             ReleaseNote(
+                version: "1.22.3",
+                headline: L10n.t("Filter the task board by substatus."),
+                changes: [
+                    ReleaseNote.Change(
+                        title: L10n.t("Four task views"),
+                        detail: L10n.t("The board opens on all active tasks. Preparation, Coding and QA tabs filter the same tasks without changing their progress, signals or chat links.")
+                    ),
+                ]
+            ),
+            ReleaseNote(
                 version: "1.22.2",
                 headline: L10n.t("A task board in the notch."),
                 changes: [
