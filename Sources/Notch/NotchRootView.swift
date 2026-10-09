@@ -612,6 +612,7 @@ struct NotchRootView: View {
             showsLocalPerformance: snapshot.showsLocalPerformance,
             localLedgerRows: snapshot.localLedgerRowCount,
             compactRowCount: snapshot.compactRowCount,
+            hasCodexWorkdayPace: snapshot.codexWorkdayPace(now: model.now) != nil,
             showsDeepSeekPricing: model.deepSeekPricingEnabled,
             costRows: model.costRows(for: snapshot))
     }

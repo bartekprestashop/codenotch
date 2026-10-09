@@ -193,6 +193,8 @@ enum NotchLayout {
     static let headerToBlock = Design.px(21)
     static let labelToBar    = Design.px(16.8)
     static let barToUsed     = Design.px(17.8)
+    static let workdayPaceGap = Design.px(8)
+    static let workdayStatusGap = Design.px(2)
     static let blockSpacing  = Design.px(20)
     static let moneyBarHeight = Design.px(12)
     static let moneyBarToStats = Design.px(14)
@@ -394,6 +396,7 @@ enum NotchLayout {
                            localModelName: String? = nil, showsLocalPerformance: Bool = false,
                            localLedgerRows: Int = 0,
                            compactRowCount: Int = 0,
+                           hasCodexWorkdayPace: Bool = false,
                            showsDeepSeekPricing: Bool = true,
                            costRows: Int = 0) -> CGFloat {
         let header = max(glyphSize, cardTitleLineHeight)
@@ -427,6 +430,9 @@ enum NotchLayout {
                 + CGFloat(moneyCount) * moneyBlock
                 + CGFloat(compactRowCount) * compactBlock
                 + CGFloat(windowCount - 1) * blockSpacing
+            if hasCodexWorkdayPace {
+                height += workdayPaceGap + 2 * cardBodyLineHeight + workdayStatusGap
+            }
             if groupCount > 0 {
                 // Each group adds a title line, spacing (12), and 16px vertical padding inside the box
                 let groupExtra = cardBodyLineHeight + Design.px(12) + 2 * Design.px(16)
@@ -552,7 +558,8 @@ enum NotchLayout {
             let height = cardHeight(windowCount: windowCount, groupCount: groupCount,
                                     sessionCount: n + 1, sessionCap: n,
                                     hasTokenUsage: hasTokenUsage, hasPlan: hasPlan,
-                                    hasResetCredits: hasResetCredits)
+                                    hasResetCredits: hasResetCredits,
+                                    hasCodexWorkdayPace: true)
             guard height <= cardBudget else { break }
             fits = n
         }
@@ -579,7 +586,8 @@ enum NotchLayout {
         cardHeight(windowCount: maxWindowCount, groupCount: 2,
                    sessionCount: sessionCap + 1, sessionCap: sessionCap,
                    hasTokenUsage: hasTokenUsage, hasPlan: hasPlan,
-                   hasResetCredits: hasResetCredits)
+                   hasResetCredits: hasResetCredits,
+                   hasCodexWorkdayPace: true)
     }
 
     static let defaultMaxCardHeight = maxCardHeight(sessionCap: defaultSessionCap)

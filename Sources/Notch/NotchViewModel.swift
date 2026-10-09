@@ -1292,6 +1292,7 @@ final class NotchViewModel: ObservableObject {
                 showsLocalPerformance: snapshot.showsLocalPerformance,
                 localLedgerRows: snapshot.localLedgerRowCount,
                 compactRowCount: snapshot.compactRowCount,
+                hasCodexWorkdayPace: snapshot.codexWorkdayPace(now: now) != nil,
                 showsDeepSeekPricing: deepSeekPricingEnabled,
                 costRows: costRows(for: snapshot))
         }.max() ?? 0

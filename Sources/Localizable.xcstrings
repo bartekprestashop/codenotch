@@ -1,6 +1,38 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "A workday plan for Codex's weekly limit.": {
+      "extractionState": "manual",
+      "localizations": { "pl": { "stringUnit": { "state": "translated", "value": "Plan dni roboczych dla tygodniowego limitu Codexa." } } }
+    },
+    "Codex weekly workday plan": {
+      "extractionState": "manual",
+      "localizations": { "pl": { "stringUnit": { "state": "translated", "value": "Plan dni roboczych dla tygodniowego limitu Codexa" } } }
+    },
+    "The weekly usage bar marks an even Monday–Friday plan and shows whether your usage is ahead of it or you have room.": {
+      "extractionState": "manual",
+      "localizations": { "pl": { "stringUnit": { "state": "translated", "value": "Pasek limitu tygodniowego oznacza równomierny plan od poniedziałku do piątku i pokazuje, czy zużywasz limit szybciej od planu, czy masz jeszcze zapas." } } }
+    },
+    "Plan now": {
+      "extractionState": "manual",
+      "localizations": { "pl": { "stringUnit": { "state": "translated", "value": "Plan teraz" } } }
+    },
+    "Using faster than plan": {
+      "extractionState": "manual",
+      "localizations": { "pl": { "stringUnit": { "state": "translated", "value": "zużywasz szybciej niż plan" } } }
+    },
+    "You have room": {
+      "extractionState": "manual",
+      "localizations": { "pl": { "stringUnit": { "state": "translated", "value": "masz zapas" } } }
+    },
+    "On plan": {
+      "extractionState": "manual",
+      "localizations": { "pl": { "stringUnit": { "state": "translated", "value": "zgodnie z planem" } } }
+    },
+    "pp": {
+      "extractionState": "manual",
+      "localizations": { "pl": { "stringUnit": { "state": "translated", "value": "p.p." } } }
+    },
     "Qoder reported no credit allowance": {
       "extractionState": "manual",
       "localizations": {

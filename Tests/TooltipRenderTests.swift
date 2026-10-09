@@ -254,6 +254,81 @@ final class TooltipRenderTests: XCTestCase {
         }
     }
 
+    func testCodexWeeklyWorkdayPaceRendersInTooltip() throws {
+        let previousLocale = L10n.testLocale
+        if ProcessInfo.processInfo.environment["CODEX_WORKDAY_PACE_LOCALE"] == "pl" {
+            L10n.testLocale = Locale(identifier: "pl")
+        }
+        defer { L10n.testLocale = previousLocale }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Warsaw")!
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2026, month: 10, day: 8, hour: 14)))
+        let reset = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2026, month: 10, day: 14, hour: 9)))
+        let snapshot = ProviderSnapshot(
+            id: "codex", displayName: "Codex", glyph: .openai,
+            fidelity: .official, status: .ok,
+            windows: [
+                LimitWindow(id: "primary", label: "5h limit", usedFraction: 0.32,
+                            resetsAt: now.addingTimeInterval(2 * 3600), duration: 5 * 3600),
+                LimitWindow(id: "secondary", label: "Weekly limit", usedFraction: 0.51,
+                            resetsAt: reset, duration: 7 * 86400)
+            ], headlineID: "primary", weeklyID: "secondary"
+        )
+        XCTAssertNotNil(snapshot.codexWorkdayPace(now: now, calendar: calendar))
+        let view = TooltipCard(snapshot: snapshot, now: now)
+            .padding(20)
+            .background(Color.black)
+            .environment(\.colorScheme, .dark)
+            .environment(\.notchSurfaceStyle, .solid)
+            .environment(\.codenotchAccentColor, .green)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 3
+        let image = try XCTUnwrap(renderer.nsImage)
+        XCTAssertGreaterThan(image.size.height,
+                             NotchLayout.cardHeight(windowCount: 2) +
+                             NotchLayout.workdayPaceGap + NotchLayout.cardBodyLineHeight)
+        if let path = ProcessInfo.processInfo.environment["CODEX_WORKDAY_PACE_RENDER_PATH"] {
+            let tiff = try XCTUnwrap(image.tiffRepresentation)
+            let png = try XCTUnwrap(NSBitmapImageRep(data: tiff)?
+                .representation(using: .png, properties: [:]))
+            try png.write(to: URL(fileURLWithPath: path))
+        }
+    }
+
+    func testCodexPrimaryOnlyWeeklyPaceRendersInTooltip() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Warsaw")!
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2026, month: 10, day: 8, hour: 14)))
+        let reset = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2026, month: 10, day: 14, hour: 9)))
+        let snapshot = ProviderSnapshot(id: "codex", displayName: "Codex",
+            glyph: .openai, fidelity: .official, status: .ok,
+            windows: [LimitWindow(id: "primary", label: "Weekly limit",
+                usedFraction: 0.61, resetsAt: reset, duration: 7 * 86400)],
+            headlineID: "primary", weeklyID: "secondary")
+        XCTAssertNotNil(snapshot.codexWorkdayPace(for: snapshot.windows[0], now: now,
+            calendar: calendar))
+        let view = TooltipCard(snapshot: snapshot, now: now)
+            .padding(20).background(Color.black)
+            .environment(\.colorScheme, .dark)
+            .environment(\.notchSurfaceStyle, .solid)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 3
+        let image = try XCTUnwrap(renderer.nsImage)
+        XCTAssertGreaterThan(image.size.height,
+            NotchLayout.cardHeight(windowCount: 1) + NotchLayout.workdayPaceGap +
+            NotchLayout.cardBodyLineHeight)
+        if let path = ProcessInfo.processInfo.environment["CODEX_PRIMARY_PACE_RENDER_PATH"] {
+            let tiff = try XCTUnwrap(image.tiffRepresentation)
+            let png = try XCTUnwrap(NSBitmapImageRep(data: tiff)?
+                .representation(using: .png, properties: [:]))
+            try png.write(to: URL(fileURLWithPath: path))
+        }
+    }
+
     /// The glass is masked by this one outline, so anything it fails to cover
     /// is a piece of the tooltip left unpainted.
     func testTheSilhouetteIsOneShapeCoveringCardAndTail() {

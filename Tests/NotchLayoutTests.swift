@@ -50,6 +50,14 @@ final class NotchLayoutTests: XCTestCase {
         XCTAssertEqual(named - bare, NotchLayout.cardBodyLineHeight, accuracy: 0.001)
     }
 
+    func testCodexWorkdayPaceReservesBothStatusLines() {
+        let bare = NotchLayout.cardHeight(windowCount: 2)
+        let withPace = NotchLayout.cardHeight(windowCount: 2, hasCodexWorkdayPace: true)
+        XCTAssertEqual(withPace - bare,
+                       NotchLayout.workdayPaceGap + 2 * NotchLayout.cardBodyLineHeight
+                       + NotchLayout.workdayStatusGap, accuracy: 0.001)
+    }
+
     func testCardGrowsWithTheSessionList() {
         let bare = NotchLayout.cardHeight(windowCount: 2)
         let one = NotchLayout.cardHeight(windowCount: 2, sessionCount: 1)

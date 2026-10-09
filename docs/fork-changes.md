@@ -30,6 +30,16 @@ do not include the features below.
 
 See [Agent requests](action-requests.md) for setup and the CLI.
 
+## Codex weekly workday pace
+
+The Codex Usage hover card keeps the weekly used percentage and reset time,
+and adds a plan marker on that same bar. The plan spreads the weekly cycle
+across local Monday–Friday time, including partial days while holding steady
+through weekends. The text compares current usage with the plan in percentage
+points; it does not forecast exhaustion. It applies only to the account's
+seven-day Codex window when the reset and duration are known. See
+[Codex workday pace](codex-workday-pace.md) for the calculation and QA fixture.
+
 ## Position and QA
 
 Codenotch 1.22 already supports Option-drag along an edge, remembers a

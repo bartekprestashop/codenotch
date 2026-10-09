@@ -32,6 +32,16 @@ enum ReleaseNotes {
     static var all: [ReleaseNote] {
         [
             ReleaseNote(
+                version: "1.22.1",
+                headline: L10n.t("A workday plan for Codex's weekly limit."),
+                changes: [
+                    ReleaseNote.Change(
+                        title: L10n.t("Codex weekly workday plan"),
+                        detail: L10n.t("The weekly usage bar marks an even Monday–Friday plan and shows whether your usage is ahead of it or you have room.")
+                    ),
+                ]
+            ),
+            ReleaseNote(
                 version: "1.22.0",
                 headline: L10n.t("Qoder's credits, more than one Command Code account, and DeepSeek's balance from the wallet that has one."),
                 changes: [

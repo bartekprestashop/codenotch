@@ -19,10 +19,32 @@ still working, done, or waiting on you.**
 > and adds agent requests in the notch, a configurable request sound and delayed Telegram
 > reminder, a request CLI, and an isolated QA build. See
 > [fork changes](docs/fork-changes.md) and [agent requests](docs/action-requests.md). The download links below point to
-> the original project's releases; no release of this fork is published.
+> the original project's releases; no binary release of this fork is published.
 > This fork build does not check or install upstream updates, which would
 > replace the local changes. Future fork updates require a separately reviewed
 > build.
+
+The Codex Usage hover card also compares the account's weekly allowance with
+an even Monday–Friday plan. Its weekly bar shows a marker for the plan at the
+current moment and a short status below; it does not predict when quota will
+run out. See [Codex workday pace](docs/codex-workday-pace.md).
+
+## Fork version 1.22.1
+
+This source version adds the workday plan marker to Codex's weekly usage bar.
+The plan counts local Monday–Friday time in the current seven-day cycle, including
+partial days, and pauses during weekends. The tooltip shows the current plan,
+the difference in percentage points, and whether usage is ahead of or behind
+the plan. Codex can report its weekly allowance as either its primary or
+secondary window; both layouts are supported without changing the 5-hour
+limit or other providers. The small notch remains unchanged.
+
+The fork also retains the [agent request panel](docs/action-requests.md), its
+optional sound and delayed Telegram reminder, and an isolated QA build. This
+is an independent fork of Vinz's Codenotch under the unchanged MIT license.
+See the [fork changelog](CHANGELOG.md) for verification and known limits.
+The [`fork-v1.22.1` source tag](https://github.com/bartekprestashop/codenotch/tree/fork-v1.22.1)
+contains code only; the download buttons below continue to link to upstream.
 
 Hover a ring for its limit windows and when they reset. Claude's ring shows the
 same **current session** window Claude Code's own `/usage` leads with, so the

@@ -426,6 +426,7 @@ private struct LimitWindowRow: View {
     let now: Date
     let resetTimeFormat: ResetTimeFormat
     let showsUsagePace: Bool
+    var workdayPace: CodexWorkdayPace? = nil
     @Environment(\.codenotchAccentColor) private var accentColor
     @Environment(\.usageWatchLimit) private var watchLimit
     @Environment(\.usageCriticalLimit) private var criticalLimit
@@ -451,7 +452,8 @@ private struct LimitWindowRow: View {
     }
 
     private var paceText: Text {
-        guard showsUsagePace, let pace = window.usagePace(now: now) else {
+        guard showsUsagePace, workdayPace == nil,
+              let pace = window.usagePace(now: now) else {
             return Text("")
         }
         return Text(" · \(pace.summary)")
@@ -469,6 +471,21 @@ private struct LimitWindowRow: View {
         window.usedFraction == nil && (window.used != nil || window.detail != nil)
     }
 
+    private var workdayStatus: String {
+        guard let workdayPace else { return "" }
+        if workdayPace.displayedDifferencePoints > 0 { return L10n.t("Using faster than plan") }
+        if workdayPace.displayedDifferencePoints < 0 { return L10n.t("You have room") }
+        return L10n.t("On plan")
+    }
+
+    private var workdayDifference: String {
+        guard let workdayPace else { return "" }
+        let points = abs(workdayPace.displayedDifferencePoints)
+        let sign = workdayPace.displayedDifferencePoints > 0 ? "+" :
+            (workdayPace.displayedDifferencePoints < 0 ? "−" : "")
+        return "\(sign)\(points) \(L10n.t("pp"))"
+    }
+
     var body: some View {
         if let money = window.money {
             MoneyBreakdownView(title: window.label, money: money, fidelity: fidelity)
@@ -484,6 +501,16 @@ private struct LimitWindowRow: View {
                     ZStack(alignment: .leading) {
                         Capsule().fill(Palette.barTrack)
                         Capsule().fill(barColor).frame(width: fillWidth)
+                        if let workdayPace {
+                            Rectangle()
+                                .fill(Palette.textPrimary)
+                                .frame(width: Design.px(3),
+                                       height: NotchLayout.barHeight + Design.px(7))
+                                .shadow(color: .black.opacity(0.8), radius: Design.px(1))
+                                .offset(x: min(max(trackWidth * workdayPace.plannedFraction
+                                                   - Design.px(1.5), 0),
+                                               trackWidth - Design.px(3)))
+                        }
                     }
                     .frame(width: trackWidth, height: NotchLayout.barHeight)
                     .padding(.top, NotchLayout.labelToBar)
@@ -495,6 +522,23 @@ private struct LimitWindowRow: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
                     .padding(.top, NotchLayout.barToUsed)
+                if let workdayPace {
+                    VStack(alignment: .leading, spacing: NotchLayout.workdayStatusGap) {
+                        HStack(spacing: Design.px(8)) {
+                            Text("\(L10n.t("Plan now")) \(Int((workdayPace.plannedFraction * 100).rounded()))%")
+                            Spacer(minLength: 0)
+                            Text(workdayDifference)
+                                .foregroundStyle(workdayPace.displayedDifferencePoints > 0 ? .orange : secondaryInk)
+                        }
+                        Text(workdayStatus)
+                            .foregroundStyle(workdayPace.displayedDifferencePoints > 0 ? .orange : secondaryInk)
+                    }
+                    .font(Typography.cardBody)
+                    .foregroundStyle(secondaryInk)
+                    .lineLimit(1)
+                    .padding(.top, NotchLayout.workdayPaceGap)
+                    .accessibilityElement(children: .combine)
+                }
             }
         }
     }
@@ -648,7 +692,8 @@ private struct ProviderTooltip: View {
 
                                 VStack(alignment: .leading, spacing: NotchLayout.blockSpacing) {
                                     ForEach(Array(group.windows.enumerated()), id: \.element.id) { windowIndex, window in
-                                        LimitWindowRow(window: window, inset: 2 * Design.px(16), fidelity: snapshot.fidelity, now: now, resetTimeFormat: resetTimeFormat, showsUsagePace: showUsagePace)
+                                        LimitWindowRow(window: window, inset: 2 * Design.px(16), fidelity: snapshot.fidelity, now: now, resetTimeFormat: resetTimeFormat, showsUsagePace: showUsagePace,
+                                                       workdayPace: snapshot.codexWorkdayPace(for: window, now: now))
                                             .padding(.top, windowIndex == 0 ? 0 : NotchLayout.blockSpacing)
                                     }
                                 }
@@ -661,7 +706,8 @@ private struct ProviderTooltip: View {
                             .padding(.top, groupIndex == 0 ? NotchLayout.headerToBlock : Design.px(28))
                         } else {
                             ForEach(Array(group.windows.enumerated()), id: \.element.id) { windowIndex, window in
-                                LimitWindowRow(window: window, fidelity: snapshot.fidelity, now: now, resetTimeFormat: resetTimeFormat, showsUsagePace: showUsagePace)
+                                LimitWindowRow(window: window, fidelity: snapshot.fidelity, now: now, resetTimeFormat: resetTimeFormat, showsUsagePace: showUsagePace,
+                                               workdayPace: snapshot.codexWorkdayPace(for: window, now: now))
                                     .padding(.top, (groupIndex == 0 && windowIndex == 0) ? NotchLayout.headerToBlock : NotchLayout.blockSpacing)
                             }
                         }
@@ -1130,6 +1176,7 @@ struct TooltipCard: View {
             showsLocalPerformance: snapshot.showsLocalPerformance,
                 localLedgerRows: snapshot.localLedgerRowCount,
             compactRowCount: snapshot.compactRowCount,
+            hasCodexWorkdayPace: snapshot.codexWorkdayPace(now: now) != nil,
             showsDeepSeekPricing: deepSeekPricingEnabled,
             costRows: costRows
         )

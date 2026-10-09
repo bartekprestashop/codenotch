@@ -1072,7 +1072,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.preferences = preferences
         let fleet = NotchFleet(scope: .mainDisplay, edge: preferences.notchEdge)
         self.notchFleet = fleet
-        fleet.setSnapshots(Fixtures.snapshots())
+        let showsCodexPace = ProcessInfo.processInfo.environment["CODENOTCH_QA_CODEX_PACE"] == "1"
+        fleet.setSnapshots(showsCodexPace
+                           ? [Fixtures.codexWorkdayPace()]
+                           : Fixtures.snapshots())
         let directory = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/Codenotch QA/ActionRequests",
                                   isDirectory: true)
