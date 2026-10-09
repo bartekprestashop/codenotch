@@ -2,8 +2,8 @@
 
 This is an independent macOS fork of [Codenotch by Vinz](https://github.com/vinzdg/codenotch),
 based on upstream 1.22. It keeps the original [MIT license](LICENSE) and
-Vinz's attribution. The fork's current source version is **1.22.1** (build 25),
-marked by [`fork-v1.22.1`](https://github.com/bartekprestashop/codenotch/tree/fork-v1.22.1).
+Vinz's attribution. This checkout is a local **1.22.2** (build 26) candidate;
+the latest public source tag is [`fork-v1.22.1`](https://github.com/bartekprestashop/codenotch/tree/fork-v1.22.1).
 
 **This fork is published as source code only.** There is no fork DMG, installer,
 binary GitHub Release, or update feed. The upstream app's downloads do not
@@ -12,6 +12,11 @@ the inherited `windows/` project does not contain them.
 
 ## What this fork adds
 
+- **Task board.** A small list icon below the usage percentage opens a compact
+  scrollable board of active Codex tasks. Each row shows progress, an independent
+  signal and the last update date; clicking it opens the relevant Codex chat.
+  Agents update it through `codenotch-task`. Completed tasks stay in the file
+  and can be resumed; see [task board instructions](docs/task-board.md).
 - **Requests from agents.** `codenotch-request` opens a request with a stable ID,
   project, task, question, and Codex chat UUID. The notch shows an orange count
   of open requests; a dark panel shows the question and opens the related Codex
@@ -55,6 +60,7 @@ make run
 Codenotch instance first. A local ad-hoc build may ask again for Keychain
 access after rebuilding. To build the request CLI separately, run
 `make request-cli`; setup and examples are in [Agent requests](docs/action-requests.md).
+Build the board CLI separately with `make task-cli`.
 No signing identity is required for `make test` or a basic local run. This
 repository does not provide a signed or notarized fork installer.
 

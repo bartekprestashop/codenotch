@@ -75,6 +75,28 @@ final class NotchViewModel: ObservableObject {
     @Published var isRequestPanelOpen = false
     var onShowRequests: (() -> Void)?
 
+    @Published var boardTasks: [BoardTask] = []
+    @Published var isTaskBoardOpen = false
+    var onShowTaskBoard: (() -> Void)?
+    var isFloatingPanelOpen: Bool { isRequestPanelOpen || isTaskBoardOpen }
+
+    /// After the final reading: below its percentage on side edges, beside
+    /// its ring on horizontal edges. Kept clear of the provider hit band.
+    var taskButtonAlong: CGFloat {
+        guard !snapshots.isEmpty else { return cellWing.lead + cellWing.length - 20 }
+        let last = snapshots.count - 1
+        let cellEnd = ringCenter(index: last)
+            + NotchLayout.cellAlong(for: edge) - NotchLayout.ringDiameter / 2
+        let gap: CGFloat = snapshots.count == 1 ? 19 : (edge.isVertical ? 8 : 16)
+        return cellWing.lead + (cellEnd + gap) * sizeScale
+    }
+
+    /// Extra straight run after the final reading for the task-board button.
+    /// The settings orb follows the extended end; the button stays above it.
+    func taskBoardFooter(cellCount: Int) -> CGFloat {
+        cellCount == 1 ? Design.px(88) : 0
+    }
+
     var staysOpenForRequests: Bool { !actionRequests.isEmpty }
 
     /// Which cell the cursor is over, if any. Driven from the window controller
@@ -250,9 +272,9 @@ final class NotchViewModel: ObservableObject {
     /// The notch's length as a lone bar at the size that was asked for — what
     /// it is while it is in the hand, joined or not a moment before.
     var plainBarLength: CGFloat {
-        NotchLayout.shapeLength(cellCount: snapshots.count, edge: edge, flare: flare,
-                                spacing: cellSpacing(cellCount: snapshots.count))
-            * requestedScale
+        (NotchLayout.shapeLength(cellCount: snapshots.count, edge: edge, flare: flare,
+                                 spacing: cellSpacing(cellCount: snapshots.count))
+            + taskBoardFooter(cellCount: snapshots.count)) * requestedScale
     }
 
     /// How close the display's own hole is, or nil when there is none in reach.
@@ -475,6 +497,7 @@ final class NotchViewModel: ObservableObject {
         guard let cutout else { return shapeLength(cellCount: cellCount) * sizeScale }
         let plain = NotchLayout.shapeLength(cellCount: cellCount, edge: edge, flare: flare,
                                             spacing: cellSpacing(cellCount: cellCount))
+            + taskBoardFooter(cellCount: cellCount)
         return cutout.width - 2 * NotchGeometry.cutoutOverlap
             + 2 * (plain * requestedScale + 2 * NotchGeometry.cutoutDeepest)
     }
@@ -1220,7 +1243,7 @@ final class NotchViewModel: ObservableObject {
         let depth = NotchLayout.bodyDepth(for: edge)
         return TravelSize(
             length: (NotchLayout.bodyLength(cellCount: count, edge: edge, spacing: spacing)
-                     + 2 * flare) * scale,
+                     + 2 * flare + taskBoardFooter(cellCount: count)) * scale,
             depth: depth * scale,
             ringCenters: (0..<count).map {
                 NotchLayout.ringCenter(index: $0, edge: edge, flare: flare, spacing: spacing) * scale
@@ -1384,7 +1407,7 @@ final class NotchViewModel: ObservableObject {
     func shapeLength(cellCount: Int) -> CGFloat {
         NotchLayout.bodyLength(cellCount: cellCount, edge: edge,
                                spacing: cellSpacing(cellCount: cellCount))
-            + leadAllowance + endAllowance
+            + leadAllowance + endAllowance + taskBoardFooter(cellCount: cellCount)
     }
 
     /// The panel as it lands on screen, size choice included.

@@ -46,8 +46,10 @@ final class NotchFleet {
     /// .sessions` before there was more than one controller.
     private(set) var sessions: [String: [AgentSession]] = [:]
     private var actionRequests: [ActionRequest] = []
+    private var boardTasks: [BoardTask] = []
     var onResolveRequest: ((ActionRequestKey) -> Void)?
     var currentRequest: ((String) -> ActionRequest?)?
+    var currentTask: ((String) -> BoardTask?)?
     /// Which display a single, unassigned controller should sit on. Only
     /// consulted by `.mainDisplay` — every controller under `.allDisplays`
     /// already has its own `assignedScreen`, which wins over this in
@@ -317,6 +319,11 @@ final class NotchFleet {
         }
     }
 
+    func apply(boardTasks: [BoardTask]) {
+        self.boardTasks = boardTasks
+        for model in models { model.boardTasks = boardTasks }
+    }
+
     func setThinkingModels(_ thinking: [String: Date]) {
         thinkingModels = thinking
         for model in models {
@@ -502,6 +509,7 @@ final class NotchFleet {
         controller.onMoveToEdge = onMoveToEdge
         controller.onResolveRequest = onResolveRequest
         controller.currentRequest = currentRequest
+        controller.currentTask = currentTask
         controller.signInItems = signInItems
         controller.model.updateSnapshots(snapshots)
         controller.model.thinkingModels = thinkingModels
@@ -514,6 +522,7 @@ final class NotchFleet {
         controller.model.refreshing = refreshing
         controller.model.sessions = sessions
         controller.model.actionRequests = actionRequests
+        controller.model.boardTasks = boardTasks
         controller.model.now = Date()
         controller.apply(visibility)
         if !actionRequests.isEmpty && visibility != .hidden {

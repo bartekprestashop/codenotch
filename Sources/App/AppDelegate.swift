@@ -5,6 +5,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notchFleet: NotchFleet?
     private var actionRequests: ActionRequestMonitor?
+    private var taskBoard: TaskBoardMonitor?
     private var store: UsageStore?
     var phoneLinkServer: PhoneLinkServer?
     var phoneLinkServerStatus: PhoneLinkServerStatus?
@@ -148,6 +149,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
         fleet.onResolveRequest = { [weak actionRequests] key in actionRequests?.resolve(key) }
         fleet.currentRequest = { [weak actionRequests] id in actionRequests?.current(id: id) }
+        let taskBoard = TaskBoardMonitor(store: TaskBoardStore(directory: requestStore.directory))
+        self.taskBoard = taskBoard
+        fleet.currentTask = { [weak taskBoard] id in taskBoard?.current(id: id) }
+        taskBoard.$tasks
+            .receive(on: RunLoop.main)
+            .sink { [weak fleet] tasks in fleet?.apply(boardTasks: tasks) }
+            .store(in: &cancellables)
 
         // `CODENOTCH_DEMO=1` puts the design frame's three providers on screen
         // with its numbers, for screenshots and for eyeballing the layout.
@@ -1062,6 +1070,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fleet.apply(deepSeekPricingSchedule: preferences.deepSeekPricingSchedule)
         fleet.show()
         actionRequests.start()
+        taskBoard.start()
     }
 
     /// A separate bundle has no route to real providers, Keychain credentials,
@@ -1092,6 +1101,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
         fleet.onResolveRequest = { [weak monitor] key in monitor?.resolve(key) }
         fleet.currentRequest = { [weak monitor] id in monitor?.current(id: id) }
+        let taskBoard = TaskBoardMonitor(store: TaskBoardStore(directory: directory))
+        self.taskBoard = taskBoard
+        fleet.currentTask = { [weak taskBoard] id in taskBoard?.current(id: id) }
+        taskBoard.$tasks
+            .receive(on: RunLoop.main)
+            .sink { [weak fleet] tasks in fleet?.apply(boardTasks: tasks) }
+            .store(in: &cancellables)
         let updater = Updater() // Never started; Runtime rejects all update actions in QA.
         let settings = SettingsWindowController(
             preferences: preferences, providers: { [] }, updater: updater,
@@ -1126,6 +1142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fleet.apply(scale: preferences.notchScale)
         fleet.show()
         monitor.start()
+        taskBoard.start()
     }
 
     /// Open the notch, and make a noise, when something has just finished.
@@ -1353,6 +1370,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         actionRequests?.stop()
+        taskBoard?.stop()
         ollamaRelay?.configure(enabled: false, endpoint: OllamaEndpoint.defaultAddress)
         lmstudioMetrics?.stop()
         tokenRefresher?.stop()

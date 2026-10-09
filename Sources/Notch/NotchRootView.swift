@@ -50,6 +50,19 @@ struct NotchRootView: View {
                         .accessibilityAddTraits(.isButton)
                 }
 
+                if model.isExpanded {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.85))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                        .position(place.point(along: model.taskButtonAlong,
+                                              across: model.notchDepth / 2))
+                        .onTapGesture { model.onShowTaskBoard?() }
+                        .accessibilityLabel("Task board, \(model.boardTasks.count) active tasks")
+                        .accessibilityAddTraits(.isButton)
+                }
+
                 // The grip that moves the notch, beside the settings button:
                 // out with it, and held out while the pointer is on it. Under
                 // the button, which it comes out of and goes back into.
@@ -170,7 +183,7 @@ struct NotchRootView: View {
                         y: model.edge.outward.y * Design.px(24)
                     )))
                 } else if let snapshot = model.hoveredSnapshot, let index = model.hoveredIndex,
-                   model.isExpanded, !model.isRequestPanelOpen {
+                   model.isExpanded, !model.isFloatingPanelOpen {
                     TooltipCard(
                         snapshot: snapshot,
                         activity: model.activity(for: snapshot),

@@ -5,6 +5,21 @@ It keeps the original [MIT license](LICENSE) and attribution. Version numbers
 refer to this fork's source; download links in the README lead to upstream
 binary releases unless stated otherwise.
 
+## 1.22.2 local candidate — 2026-10-09
+
+- Added a compact task board opened by a small list icon below the percentage
+  on the right-edge notch. Rows show a title, last update date, equal-width
+  progress bar and an independent status signal; the board scrolls at 10–15
+  rows. Clicking a row opens its Codex coordinator chat or the signal source.
+- Added a separate versioned task JSON store and `codenotch-task` CLI for
+  progress, conversation links, signals, completion and resumption. Completed
+  records remain available with `list --all`. The request store and Telegram
+  reminders are separate.
+- Added isolated QA coverage, model tests and [CLI documentation](docs/task-board.md).
+
+This candidate is for local verification. No GitHub publication or binary
+release has been created for 1.22.2.
+
 ## fork-v1.22.1 — 2026-10-09
 
 - Added a marker to the Codex weekly usage bar showing where even use across

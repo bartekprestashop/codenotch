@@ -32,6 +32,16 @@ enum ReleaseNotes {
     static var all: [ReleaseNote] {
         [
             ReleaseNote(
+                version: "1.22.2",
+                headline: L10n.t("A task board in the notch."),
+                changes: [
+                    ReleaseNote.Change(
+                        title: L10n.t("Task board"),
+                        detail: L10n.t("A compact board opens below the usage reading. Track progress, signals and the latest update for each Codex task; completed tasks can be resumed.")
+                    ),
+                ]
+            ),
+            ReleaseNote(
                 version: "1.22.1",
                 headline: L10n.t("A workday plan for Codex's weekly limit."),
                 changes: [

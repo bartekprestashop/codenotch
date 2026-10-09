@@ -59,11 +59,15 @@ DEV_SIGN := CODE_SIGN_IDENTITY="Apple Development" CODE_SIGN_STYLE=Manual \
 endif
 endif
 
-.PHONY: gen build test test-ci verify-deps run install clean request-cli
+.PHONY: gen build test test-ci verify-deps run install clean request-cli task-cli
 
 request-cli:
 	mkdir -p build
 	swiftc -module-cache-path build/ModuleCache Sources/Requests/ActionRequest.swift Scripts/codenotch-request.swift -o build/codenotch-request
+
+task-cli:
+	mkdir -p build
+	swiftc -module-cache-path build/ModuleCache Sources/Tasks/TaskBoard.swift Scripts/codenotch-task.swift -o build/codenotch-task
 
 gen:
 	xcodegen generate

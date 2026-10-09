@@ -42,9 +42,11 @@ final class NotchWindowController {
     var onMoveToEdge: ((NotchEdge, CGFloat?) -> Void)?
     var onResolveRequest: ((ActionRequestKey) -> Void)?
     var currentRequest: ((String) -> ActionRequest?)?
+    var currentTask: ((String) -> BoardTask?)?
 
     private var panel: NotchPanel?
     private var requestPanel: RequestPanel?
+    private var taskBoardPanel: RequestPanel?
     private var hostingView: NotchHostingView<NotchRootView>?
 
     /// The display this notch belongs to. Nil follows the menu-bar screen,
@@ -152,7 +154,7 @@ final class NotchWindowController {
             && !model.staysOpenForRequests {
             if let panel {
                 let local = localCursor(in: panel.frame)
-                let overTooltip = (model.isRequestPanelOpen ? nil : model.hoveredIndex)
+                let overTooltip = (model.isFloatingPanelOpen ? nil : model.hoveredIndex)
                     .flatMap(tooltipRect(index:))
                     .map { model.isExpanded && $0.contains(local) } ?? false
                 if liveRect.contains(local) || overTooltip {
@@ -200,6 +202,7 @@ final class NotchWindowController {
 
     func show() {
         model.onShowRequests = { [weak self] in self?.showRequestPanel() }
+        model.onShowTaskBoard = { [weak self] in self?.showTaskBoard() }
         relocate()
         startWatchingCursor()
         startWatchingFullScreen()
@@ -248,6 +251,14 @@ final class NotchWindowController {
                     self?.requestPanel?.close()
                     self?.requestPanel = nil
                 }
+            }
+            .store(in: &cancellables)
+
+        model.$boardTasks
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.refreshTaskBoardPanel() }
             }
             .store(in: &cancellables)
 
@@ -306,6 +317,8 @@ final class NotchWindowController {
     func stop() {
         requestPanel?.close()
         requestPanel = nil
+        taskBoardPanel?.close()
+        taskBoardPanel = nil
         setPointing(false)
         peekUntil = nil
         peekWork?.cancel()
@@ -1341,7 +1354,7 @@ final class NotchWindowController {
         if model.isExpanded, let event = model.activeResetAlert, let card = resetCardRect(event: event) {
             rects.append(card)
         }
-        if model.isExpanded, !model.isRequestPanelOpen,
+        if model.isExpanded, !model.isFloatingPanelOpen,
            let index = model.hoveredIndex, let card = tooltipRect(index: index) {
             rects.append(card)
         }
@@ -1433,7 +1446,7 @@ final class NotchWindowController {
     func cursorMoved() {
         guard let panel, !isOptionDragging else { return }
         let local = localCursor(in: panel.frame)
-        let overTooltip = (model.isRequestPanelOpen ? nil : model.hoveredIndex)
+        let overTooltip = (model.isFloatingPanelOpen ? nil : model.hoveredIndex)
             .flatMap(tooltipRect(index:))
             .map { model.isExpanded && $0.contains(local) } ?? false
         // The fold setting gates this check as surely as the one in
@@ -1446,7 +1459,7 @@ final class NotchWindowController {
         var target: Int?
         if model.isExpanded, notchRect.contains(local) {
             target = cellIndex(along: placement.along(of: local))
-        } else if model.isExpanded, !model.isRequestPanelOpen,
+        } else if model.isExpanded, !model.isFloatingPanelOpen,
                   let current = model.hoveredIndex,
                   let card = tooltipRect(index: current),
                   card.contains(local) {
@@ -1610,6 +1623,12 @@ final class NotchWindowController {
             showRequestPanel()
             return
         }
+        if model.isExpanded, notchRect.contains(local),
+           abs(placement.along(of: local) - model.taskButtonAlong) < 17,
+           abs(placement.across(of: local) - model.notchDepth / 2) < 17 {
+            showTaskBoard()
+            return
+        }
 
         // The handle sits inside the notch, so it has to be tested before the
         // cells — otherwise the cell band nearest the foot of the stack swallows
@@ -1645,7 +1664,7 @@ final class NotchWindowController {
         // Clicks on the tooltip card belong to whatever is drawn there — the
         // session rows take their own taps — and must not fall through to the
         // cell refetch or the pin toggle underneath.
-        if model.isExpanded, !model.isRequestPanelOpen,
+        if model.isExpanded, !model.isFloatingPanelOpen,
            let index = model.hoveredIndex,
            let card = tooltipRect(index: index), card.contains(local) {
             return
@@ -2141,6 +2160,7 @@ final class NotchWindowController {
 
     func showRequestPanel() {
         guard let notch = panel, !model.actionRequests.isEmpty else { return }
+        taskBoardPanel?.close()
         if let requestPanel, requestPanel.isVisible {
             requestPanel.close()
             return
@@ -2190,6 +2210,73 @@ final class NotchWindowController {
         updateInteractiveRects()
         requestPanel.makeKeyAndOrderFront(nil)
         self.requestPanel = requestPanel
+    }
+
+    func showTaskBoard() {
+        guard panel != nil, let frame = taskBoardFrame() else { return }
+        if let taskBoardPanel, taskBoardPanel.isVisible {
+            taskBoardPanel.close()
+            return
+        }
+        requestPanel?.close()
+        let board = RequestPanel(contentRect: frame)
+        board.onClose = { [weak self] in
+            self?.model.isTaskBoardOpen = false
+            self?.taskBoardPanel = nil
+            self?.updateInteractiveRects()
+        }
+        board.contentView = NSHostingView(rootView: taskBoardContent(width: frame.width,
+                                                                     height: frame.height))
+        model.isTaskBoardOpen = true
+        updateInteractiveRects()
+        board.makeKeyAndOrderFront(nil)
+        taskBoardPanel = board
+    }
+
+    private func taskBoardFrame() -> CGRect? {
+        guard let notch = panel else { return nil }
+        let screen = notch.screen ?? currentScreen()
+        let visible = screen?.visibleFrame ?? notch.frame
+        let width = min(TaskBoardPanelView.preferredWidth, visible.width - 24)
+        let height = min(TaskBoardPanelView.height(for: model.boardTasks.count), visible.height - 24)
+        let button = placement.point(along: model.taskButtonAlong,
+                                     across: model.notchDepth / 2)
+        let anchor = CGPoint(x: notch.frame.minX + button.x,
+                             y: notch.frame.maxY - button.y)
+        let offset: CGFloat = 15
+        let origin: CGPoint
+        switch model.edge {
+        case .right: origin = CGPoint(x: anchor.x - width - offset, y: anchor.y - height / 2)
+        case .left: origin = CGPoint(x: anchor.x + offset, y: anchor.y - height / 2)
+        case .top: origin = CGPoint(x: anchor.x - width / 2, y: anchor.y - height - offset)
+        case .bottom: origin = CGPoint(x: anchor.x - width / 2, y: anchor.y + offset)
+        }
+        let x = min(max(origin.x, visible.minX + 12), visible.maxX - width - 12)
+        let y = min(max(origin.y, visible.minY + 12), visible.maxY - height - 12)
+        return CGRect(x: x, y: y, width: width, height: height)
+    }
+
+    private func taskBoardContent(width: CGFloat, height: CGFloat) -> TaskBoardPanelView {
+        TaskBoardPanelView(
+            tasks: model.boardTasks, width: width, height: height,
+            open: { [weak self] id, updatedAt in
+                guard let self, let current = self.currentTask?(id),
+                      current.updatedAt == updatedAt, let link = current.deepLink else { return }
+                self.taskBoardPanel?.close()
+                if !NSWorkspace.shared.open(link) {
+                    Log.usage.error("Codex task chat link could not be opened")
+                }
+            },
+            dismiss: { [weak self] in self?.taskBoardPanel?.close() }
+        )
+    }
+
+    private func refreshTaskBoardPanel() {
+        guard let board = taskBoardPanel, board.isVisible,
+              let frame = taskBoardFrame(),
+              let hosting = board.contentView as? NSHostingView<TaskBoardPanelView> else { return }
+        board.setFrame(frame, display: true)
+        hosting.rootView = taskBoardContent(width: frame.width, height: frame.height)
     }
 }
 
