@@ -58,5 +58,10 @@ tested malformed documents, file permissions, idempotent retries and 64
 concurrent writes; its verdict was **PASS WITH RISKS**. In the isolated QA app,
 the icon was visible below the reading with one and three providers, a 15-row
 board scrolled, all four signals rendered, and a progress update reached the
-open panel without closing it. The remaining checks are the installed app on
-the user's screen and the real Codex deep links.
+open panel without closing it. The local 1.22.2 installation showed the task
+button with three active sample tasks and rendered their titles, progress and
+signals in the panel. The three records use verified Codex conversation IDs.
+The operating system blocked accessibility inspection of the Codex window
+after a row click, so the destination chat could not be confirmed visually in
+this run. Real deep links and other display configurations remain for user
+acceptance testing.
