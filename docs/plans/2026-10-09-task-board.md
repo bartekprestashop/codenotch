@@ -37,8 +37,8 @@ access intact.
 - Concurrent CLI writers: lock and atomic replacement, with tests covering
   stale and idempotent updates.
 - Panel click routing and 10–15 rows: verify in the app and QA target, including
-  scrolling and conversation destination. Do not populate production with demo
-  tasks.
+  scrolling and conversation destination. Seed demo tasks only after the
+  user's explicit approval.
 - Data isolation: verify existing `requests.json` and Keychain are unchanged;
   task signals must not touch the reminder monitor. After approval and local
   installation, seed exactly three clearly labeled sample tasks linked to
@@ -54,4 +54,7 @@ skipped, zero failures. Independent QA: PASS WITH RISKS; 64 concurrent CLI
 writes preserved every record, malformed JSON was rejected, and the task store
 did not modify requests. Visual QA checked one and three providers, 15 rows,
 scrolling, all signal colors and live progress update in an open panel.
-Installed-app and real-link verification remain before completion.
+The local app was installed and displayed the approved three labeled examples.
+In the later 1.22.3 update, the user manually confirmed that a row opens the
+correct Codex chat. The final task-board verification is in
+[`docs/task-board.md`](../task-board.md).
